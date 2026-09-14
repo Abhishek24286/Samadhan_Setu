@@ -98,6 +98,48 @@ export const AuthProvider = ({ children }) => {
     throw new Error(res.message || 'Signup failed.');
   };
 
+  // OTP Functions
+  const sendOtp = async (mobile, context) => {
+    const res = await apiRequest('/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ mobile, context }),
+    });
+    if (!res.success) throw new Error(res.message || 'Failed to send OTP.');
+    return res;
+  };
+
+  const loginWithOtp = async (mobile, otp) => {
+    const res = await apiRequest('/auth/verify-otp-login', {
+      method: 'POST',
+      body: JSON.stringify({ mobile, otp }),
+    });
+
+    if (res.success && res.token) {
+      localStorage.setItem('jh_token', res.token);
+      setToken(res.token);
+      setUser(res.user);
+      showToast(res.message || 'Logged in successfully.', 'success');
+      return res.user;
+    }
+    throw new Error(res.message || 'OTP login failed.');
+  };
+
+  const signupWithOtp = async (userData) => {
+    const res = await apiRequest('/auth/verify-otp-signup', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+
+    if (res.success && res.token) {
+      localStorage.setItem('jh_token', res.token);
+      setToken(res.token);
+      setUser(res.user);
+      showToast(res.message, 'success');
+      return res.user;
+    }
+    throw new Error(res.message || 'OTP signup failed.');
+  };
+
   // Logout
   const logout = () => {
     localStorage.removeItem('jh_token');
@@ -122,6 +164,9 @@ export const AuthProvider = ({ children }) => {
         login,
         adminLogin,
         signup,
+        sendOtp,
+        loginWithOtp,
+        signupWithOtp,
         logout,
         isAdmin,
         isUniversity,
