@@ -2,16 +2,10 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
-  Building2, 
-  FileText, 
-  Search, 
-  UserCheck, 
   Menu, 
   X, 
   ShieldCheck, 
   LogOut, 
-  User, 
-  HelpCircle,
   PhoneCall,
   GraduationCap
 } from 'lucide-react';
@@ -32,24 +26,24 @@ export const Navbar = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white shadow-xs border-b border-slate-200">
-      {/* 1. Official Government Top Tricolor Ribbon & Accessibility Bar */}
-      <div className="bg-slate-900 text-slate-200 text-xs py-1 px-4 sm:px-8 border-b border-slate-800">
+    <header className="sticky top-0 z-40 w-full bg-white font-sans shadow-sm">
+      {/* Top Header Bar */}
+      <div className="bg-slate-900 text-slate-200 text-xs py-1.5 px-4 sm:px-8">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 font-medium">
-            <span className="text-amber-400 font-bold">झारखंड सरकार</span>
-            <span className="text-slate-500">|</span>
-            <span className="text-slate-300">Government of Jharkhand Public-Service Initiative</span>
+            <span className="font-bold text-amber-400">Government of Jharkhand</span>
+            <span className="text-slate-600">|</span>
+            <span className="text-slate-300">Public Service & Problem Redressal Initiative</span>
           </div>
 
           <div className="flex items-center gap-4 text-xs">
-            <span className="hidden md:inline-flex items-center gap-1 text-slate-400">
-              <PhoneCall className="w-3 h-3 text-emerald-400" /> Helpline: 181 / 0651-2446162
+            <span className="hidden md:inline-flex items-center gap-1 text-slate-300">
+              <PhoneCall className="w-3 h-3 text-[#0D5C3A]" /> Helpline: 181 / 0651-2446162
             </span>
             <span className="text-slate-600 hidden md:inline">|</span>
             <Link
               to="/admin/login"
-              className="text-slate-400 hover:text-amber-300 transition text-[11px] underline decoration-dotted"
+              className="text-slate-300 hover:text-amber-300 transition text-[11px] underline decoration-dotted"
             >
               Government Official Access
             </Link>
@@ -57,35 +51,24 @@ export const Navbar = () => {
         </div>
       </div>
 
-      {/* Decorative Government Tricolor Accent line */}
-      <div className="h-1 w-full flex">
-        <div className="flex-1 bg-gov-saffron"></div>
-        <div className="flex-1 bg-white"></div>
-        <div className="flex-1 bg-gov-green"></div>
-      </div>
-
-      {/* 2. Main Portal Branding & Navigation */}
+      {/* Main Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between py-3.5">
-          {/* Official Emblem & Portal Title */}
-          <Link to="/" className="flex items-center gap-3.5 group">
-            {/* Government Emblem placeholder */}
-            <div className="w-12 h-12 rounded-full bg-gov-green text-white flex items-center justify-center font-serif text-lg font-black border-2 border-amber-500 shadow-xs shrink-0">
-              <span>झार</span>
+          {/* Logo & Portal Branding */}
+          <Link to="/" className="flex items-center gap-3 group">
+            <div 
+              className="w-11 h-11 rounded-full text-white flex items-center justify-center font-serif text-sm font-black shadow-sm shrink-0"
+              style={{ backgroundColor: '#0D5C3A' }}
+            >
+              <span>JH</span>
             </div>
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 font-sans">
-                  समाधान <span className="text-gov-green">सेतु</span>
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-100 text-gov-green border border-emerald-300">
-                  Citizen Portal
+                <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+                  Samadhan<span style={{ color: '#0D5C3A' }}>Setu</span>
                 </span>
               </div>
-              <p className="text-[11px] text-slate-600 font-medium">
-                Public Problem Redressal & Institutional Innovation Platform
-              </p>
             </div>
           </Link>
 
@@ -95,11 +78,13 @@ export const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
+                state={link.path === '/report' && !token ? { from: { pathname: '/report' } } : undefined}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
                   isActive(link.path)
-                    ? 'bg-gov-green text-white shadow-xs'
-                    : 'text-slate-700 hover:text-gov-green hover:bg-slate-100'
+                    ? 'text-white shadow-sm'
+                    : 'text-slate-700 hover:bg-slate-100'
                 }`}
+                style={isActive(link.path) ? { backgroundColor: '#0D5C3A' } : undefined}
               >
                 {link.label}
               </Link>
@@ -114,9 +99,10 @@ export const Navbar = () => {
                 {isAdmin && (
                   <Link
                     to="/admin/dashboard"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gov-green text-white hover:bg-gov-darkgreen transition shadow-xs"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-white transition shadow-sm"
+                    style={{ backgroundColor: '#0D5C3A' }}
                   >
-                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    <ShieldCheck className="w-4 h-4 text-amber-300" />
                     <span>Admin Console</span>
                   </Link>
                 )}
@@ -124,20 +110,23 @@ export const Navbar = () => {
                 {isUniversity && (
                   <Link
                     to="/university/dashboard"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-700 text-white hover:bg-blue-800 transition shadow-xs"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold bg-blue-700 text-white hover:bg-blue-800 transition shadow-sm"
                   >
                     <GraduationCap className="w-4 h-4 text-amber-300" />
                     <span>University Portal</span>
                   </Link>
                 )}
 
-                <div className="px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700">
+                <div 
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                  style={{ backgroundColor: '#F0F7F4', color: '#0D5C3A' }}
+                >
                   {user.name.split(' ')[0]} ({user.role})
                 </div>
 
                 <button
                   onClick={logout}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
+                  className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
                   title="Logout"
                 >
                   <LogOut className="w-4 h-4" />
@@ -147,25 +136,28 @@ export const Navbar = () => {
               <div className="flex items-center gap-2">
                 <Link
                   to="/login"
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 border border-slate-300 transition"
+                  className="px-4 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
                 >
                   Citizen Login
                 </Link>
                 <Link
-                  to="/report"
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-gov-green hover:bg-gov-darkgreen transition shadow-xs"
+                  to="/signup"
+                  className="px-4 py-2 rounded-lg text-xs font-bold text-white transition shadow-sm"
+                  style={{ backgroundColor: '#0D5C3A' }}
                 >
-                  Report Problem
+                  Register
                 </Link>
               </div>
             )}
           </div>
 
-          {/* Mobile Hamburger Button */}
+          {/* Mobile Menu Toggle Button */}
           <div className="flex lg:hidden items-center gap-2">
             <Link
-              to="/report"
-              className="px-2.5 py-1.5 text-xs font-bold bg-gov-green text-white rounded-md"
+              to={token ? "/report" : "/login"}
+              state={!token ? { from: { pathname: "/report" } } : undefined}
+              className="px-3 py-1.5 text-xs font-bold text-white rounded-md shadow-sm"
+              style={{ backgroundColor: '#0D5C3A' }}
             >
               Report
             </Link>
@@ -180,35 +172,38 @@ export const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Navigation Dropdown */}
       {mobileOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-2 shadow-lg">
+        <div className="lg:hidden bg-white px-4 py-4 space-y-2 shadow-lg">
           {navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
+              state={link.path === '/report' && !token ? { from: { pathname: '/report' } } : undefined}
               onClick={() => setMobileOpen(false)}
-              className={`block px-3 py-2 rounded-lg text-sm font-semibold ${
+              className={`block px-3 py-2 rounded-lg text-sm font-bold ${
                 isActive(link.path)
-                  ? 'bg-gov-green text-white font-bold'
+                  ? 'text-white'
                   : 'text-slate-700 hover:bg-slate-100'
               }`}
+              style={isActive(link.path) ? { backgroundColor: '#0D5C3A' } : undefined}
             >
               {link.label}
             </Link>
           ))}
 
-          <div className="pt-3 border-t border-slate-200 space-y-2">
+          <div className="pt-3 space-y-2">
             {token && user ? (
               <>
-                <div className="text-xs font-medium text-slate-500 px-3">
-                  Logged in as: <strong className="text-slate-800">{user.name}</strong> ({user.role})
+                <div className="text-xs font-semibold text-slate-600 px-3">
+                  Logged in as: <strong className="text-slate-900">{user.name}</strong> ({user.role})
                 </div>
                 {isAdmin && (
                   <Link
                     to="/admin/dashboard"
                     onClick={() => setMobileOpen(false)}
-                    className="block px-3 py-2 rounded-lg text-xs font-bold bg-gov-green text-white"
+                    className="block px-3 py-2 rounded-lg text-xs font-bold text-white"
+                    style={{ backgroundColor: '#0D5C3A' }}
                   >
                     Admin Dashboard
                   </Link>
@@ -227,7 +222,7 @@ export const Navbar = () => {
                     setMobileOpen(false);
                     logout();
                   }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50"
+                  className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100"
                 >
                   Logout
                 </button>
@@ -237,14 +232,15 @@ export const Navbar = () => {
                 <Link
                   to="/login"
                   onClick={() => setMobileOpen(false)}
-                  className="flex-1 text-center py-2 rounded-lg text-xs font-bold border border-slate-300 text-slate-700"
+                  className="flex-1 text-center py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100"
                 >
                   Login
                 </Link>
                 <Link
                   to="/signup"
                   onClick={() => setMobileOpen(false)}
-                  className="flex-1 text-center py-2 rounded-lg text-xs font-bold bg-gov-green text-white"
+                  className="flex-1 text-center py-2 rounded-lg text-xs font-bold text-white"
+                  style={{ backgroundColor: '#0D5C3A' }}
                 >
                   Signup
                 </Link>
