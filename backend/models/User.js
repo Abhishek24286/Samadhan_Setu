@@ -38,6 +38,27 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // New fields for University
+    registrationNumber: {
+      type: String,
+      default: '',
+    },
+    address: {
+      type: String,
+      default: '',
+    },
+    expertiseTags: {
+      type: [String],
+      default: [],
+    },
+    serviceLocation: {
+      type: String,
+      default: '',
+    },
+    contactPerson: {
+      type: String,
+      default: '',
+    },
     status: {
       type: String,
       enum: ['active', 'pending_approval', 'disabled'],
