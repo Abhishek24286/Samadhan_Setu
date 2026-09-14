@@ -1,18 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  GraduationCap, 
-  Layers, 
-  FileText, 
-  Send, 
-  Clock, 
-  CheckCircle2, 
-  MapPin, 
-  Loader2, 
-  PlusCircle, 
-  AlertCircle,
-  ExternalLink,
-  ChevronRight
-} from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { StatusBadge } from '../components/StatusBadge';
@@ -20,11 +6,15 @@ import { StatusBadge } from '../components/StatusBadge';
 export const UniversityDashboard = () => {
   const { user, showToast } = useAuth();
   const [activeTab, setActiveTab] = useState('assigned'); // 'assigned' | 'solutions' | 'submit'
+  
   const [problems, setProblems] = useState([]);
   const [solutions, setSolutions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Form for submitting proposed solution
+  // Detail view state for selected problem
+  const [selectedProblem, setSelectedProblem] = useState(null);
+
+  // Form state for submitting proposed solution
   const [targetProblem, setTargetProblem] = useState(null);
   const [solutionForm, setSolutionForm] = useState({
     title: '',
@@ -36,6 +26,7 @@ export const UniversityDashboard = () => {
   });
   const [submittingSolution, setSubmittingSolution] = useState(false);
 
+  // Fetch real data from your backend API / Database
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -44,10 +35,24 @@ export const UniversityDashboard = () => {
         apiRequest('/university/my-solutions'),
       ]);
 
-      if (probRes.success) setProblems(probRes.problems || []);
-      if (solRes.success) setSolutions(solRes.solutions || []);
+      if (probRes && probRes.success && probRes.problems) {
+        setProblems(probRes.problems);
+      } else if (Array.isArray(probRes)) {
+        setProblems(probRes);
+      } else {
+        setProblems([]);
+      }
+
+      if (solRes && solRes.success) {
+        setSolutions(solRes.solutions || []);
+      } else if (Array.isArray(solRes)) {
+        setSolutions(solRes);
+      }
     } catch (err) {
-      console.error('Failed to load university portal data:', err.message);
+      console.error('Failed to load university portal data from DB:', err.message);
+      if (showToast) {
+        showToast('Failed to fetch latest problems from database.', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -79,163 +84,222 @@ export const UniversityDashboard = () => {
       const res = await apiRequest('/university/solutions', {
         method: 'POST',
         body: JSON.stringify({
-          problemId: targetProblem.problemId,
+          problemId: targetProblem.problemId || targetProblem._id,
           ...solutionForm,
         }),
       });
 
-      if (res.success) {
-        showToast('Solution blueprint submitted successfully! District administration notified.', 'success');
+      if (res && res.success) {
+        if (showToast) showToast('Solution blueprint submitted successfully.', 'success');
         setTargetProblem(null);
         setActiveTab('solutions');
         fetchData();
       }
     } catch (err) {
-      showToast(err.message || 'Failed to submit solution.', 'error');
+      if (showToast) showToast(err.message || 'Failed to submit solution.', 'error');
     } finally {
       setSubmittingSolution(false);
     }
   };
 
   return (
-    <div className="min-h-[calc(100vh-140px)] bg-gov-bg -mx-4 sm:-mx-6 lg:-mx-8 -mt-6 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* University Header */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                Accredited Technical Portal
-              </span>
-              <span className="text-xs text-slate-500 font-mono">
-                {user?.institutionName || user?.name}
-              </span>
+    <div className="min-h-screen bg-slate-100/60 -mx-4 sm:-mx-6 lg:-mx-8 -mt-6 p-3 sm:p-4 text-slate-900 text-xs">
+      <div className="max-w-7xl mx-auto space-y-3">
+        
+        {/* Header */}
+        <div className="bg-slate-900 text-white p-4 rounded-md shadow-sm border border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[10px] uppercase font-bold tracking-widest text-slate-400 border-b border-slate-700 pb-1 mb-1.5">
+                Academic Partner Portal &bull; {user?.institutionName || user?.name || 'Institutional Access'}
+              </div>
+              <h1 className="text-base font-bold text-white tracking-tight">
+                University Task Management & Solution Filing System
+              </h1>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <GraduationCap className="w-7 h-7 text-gov-green" />
-              University Innovation Portal
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Examine assigned community problems, coordinate faculty-student R&D teams, and upload technical proposals.
-            </p>
-          </div>
 
-          <div className="text-right">
-            <span className="text-xs text-slate-400 block font-medium">Authorized Nodal Representative:</span>
-            <span className="text-sm font-bold text-slate-900">{user?.name}</span>
-            <span className="text-xs text-slate-500 block">{user?.email}</span>
+            <div className="flex items-center gap-4 bg-slate-800/80 px-3 py-1.5 rounded border border-slate-700/60 text-[11px]">
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Nodal Officer</span>
+                <span className="font-bold text-slate-100">{user?.name || 'N/A'}</span>
+              </div>
+              <div className="h-6 w-px bg-slate-700"></div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Contact Email</span>
+                <span className="text-slate-300 font-mono">{user?.email || 'N/A'}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Dashboard Tabs */}
-        <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 rounded-xl shadow-2xs overflow-x-auto">
+        {/* Detailed Task View Panel */}
+        {selectedProblem && (
+          <div className="bg-white border border-slate-400 p-4 rounded space-y-3 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedProblem(null)}
+                  className="px-2 py-0.5 border border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded text-[11px]"
+                >
+                  Back to List
+                </button>
+                <span className="font-mono font-bold text-slate-800">#{selectedProblem.problemId || selectedProblem._id}</span>
+                <StatusBadge status={selectedProblem.status} />
+              </div>
+              <button
+                onClick={() => setSelectedProblem(null)}
+                className="text-slate-500 font-bold hover:text-slate-800 px-1 text-sm"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="lg:col-span-2 space-y-2">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">{selectedProblem.title}</h2>
+                  <p className="text-slate-500 text-[11px] mt-0.5">
+                    Category: {selectedProblem.category} | District: {selectedProblem.district}
+                  </p>
+                </div>
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded">
+                  <span className="font-bold text-slate-600 uppercase text-[10px] block mb-1">Detailed Problem Description</span>
+                  <p className="text-slate-800 leading-normal whitespace-pre-line">{selectedProblem.description}</p>
+                </div>
+              </div>
+
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded space-y-2">
+                <span className="font-bold text-slate-600 uppercase text-[10px] block border-b border-slate-200 pb-1">Location Details</span>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">District / Block:</span>
+                  <span className="font-semibold text-slate-800">
+                    {selectedProblem.village ? `${selectedProblem.village}, ` : ''}
+                    {selectedProblem.block ? `${selectedProblem.block}, ` : ''}
+                    {selectedProblem.district}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Full Address:</span>
+                  <span className="text-slate-800">{selectedProblem.location || 'N/A'}</span>
+                </div>
+                <div className="pt-2">
+                  <button
+                    onClick={() => {
+                      const prob = selectedProblem;
+                      setSelectedProblem(null);
+                      handleOpenSubmit(prob);
+                    }}
+                    className="w-full text-center px-3 py-1 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded"
+                  >
+                    Submit Proposal for This Task
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dynamic Navigation Bar */}
+        <div className="flex items-center gap-1 border-b border-slate-300 bg-white px-2 py-1.5 rounded">
           <button
             onClick={() => setActiveTab('assigned')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+            className={`px-3 py-1 font-bold text-xs rounded transition ${
               activeTab === 'assigned'
-                ? 'bg-gov-green text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-slate-800 text-white'
+                : 'text-slate-700 hover:bg-slate-100'
             }`}
           >
-            Assigned Problems ({problems.length})
+            Assigned Tasks ({problems.length})
           </button>
           <button
             onClick={() => setActiveTab('solutions')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+            className={`px-3 py-1 font-bold text-xs rounded transition ${
               activeTab === 'solutions'
-                ? 'bg-gov-green text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-slate-800 text-white'
+                : 'text-slate-700 hover:bg-slate-100'
             }`}
           >
-            Submitted Solutions ({solutions.length})
+            Filed Proposals ({solutions.length})
           </button>
           {targetProblem && (
             <button
               onClick={() => setActiveTab('submit')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              className={`px-3 py-1 font-bold text-xs rounded transition ${
                 activeTab === 'submit'
-                  ? 'bg-gov-green text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
+                  ? 'bg-slate-800 text-white'
+                  : 'text-slate-700 hover:bg-slate-100'
               }`}
             >
-              Submit Solution: {targetProblem.problemId}
+              Filing: #{targetProblem.problemId || targetProblem._id}
             </button>
           )}
         </div>
 
+        {/* Content Section */}
         {loading ? (
-          <div className="py-16 text-center bg-white rounded-2xl border border-slate-200">
-            <Loader2 className="w-6 h-6 animate-spin mx-auto text-gov-green mb-2" />
-            <p className="text-xs text-slate-500">Retrieving assigned community problems...</p>
+          <div className="py-12 text-center bg-white border border-slate-300 rounded text-slate-500 font-medium">
+            Fetching problem records from database...
           </div>
         ) : (
           <>
             {/* TAB 1: ASSIGNED PROBLEMS */}
             {activeTab === 'assigned' && (
-              <div className="space-y-4">
+              <div className="bg-white border border-slate-300 rounded overflow-hidden">
+                <div className="p-2.5 border-b border-slate-200 bg-slate-50 font-bold text-slate-800">
+                  Assigned Community Problems & Technical Requirements
+                </div>
                 {problems.length > 0 ? (
-                  problems.map((p) => (
-                    <div
-                      key={p._id}
-                      className="bg-white p-6 rounded-2xl border border-slate-200/90 hover:border-emerald-300 transition shadow-xs flex flex-col md:flex-row items-start justify-between gap-6"
-                    >
-                      <div className="space-y-2.5 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-mono font-bold text-gov-green bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                            {p.problemId}
-                          </span>
-                          <StatusBadge status={p.status} />
-                          <span className="text-xs text-slate-400 font-medium">
-                            Category: {p.category}
-                          </span>
-                        </div>
-
-                        <h3 className="text-lg font-bold text-slate-900">
-                          {p.title}
-                        </h3>
-
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                          <MapPin className="w-3.5 h-3.5 text-gov-saffron" />
-                          <span>
-                            {p.village ? `${p.village}, ` : ''}
-                            {p.block ? `${p.block}, ` : ''}
-                            <strong>{p.district}, Jharkhand</strong>
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-slate-600 leading-relaxed bg-gov-bg p-3.5 rounded-xl border border-slate-200">
-                          {p.description}
-                        </p>
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex flex-col gap-2 w-full md:w-auto shrink-0">
-                        <button
-                          onClick={() => handleOpenSubmit(p)}
-                          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gov-green hover:bg-gov-darkgreen shadow-sm transition cursor-pointer"
-                        >
-                          <PlusCircle className="w-4 h-4" />
-                          <span>Submit Solution Blueprint</span>
-                        </button>
-                        <a
-                          href={`/track?id=${p.problemId}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition"
-                        >
-                          <span>View Public Timeline</span>
-                          <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                        </a>
-                      </div>
-                    </div>
-                  ))
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
+                        <tr>
+                          <th className="py-2 px-3 border-r border-slate-200">ID</th>
+                          <th className="py-2 px-3 border-r border-slate-200">Title & Description</th>
+                          <th className="py-2 px-3 border-r border-slate-200">Category</th>
+                          <th className="py-2 px-3 border-r border-slate-200">Location</th>
+                          <th className="py-2 px-3 border-r border-slate-200">Status</th>
+                          <th className="py-2 px-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-slate-800">
+                        {problems.map((p) => (
+                          <tr key={p._id || p.problemId} className="hover:bg-slate-50">
+                            <td className="py-2 px-3 border-r border-slate-200 font-mono font-bold text-slate-900 whitespace-nowrap">
+                              {p.problemId || p._id}
+                            </td>
+                            <td className="py-2 px-3 border-r border-slate-200 max-w-sm">
+                              <div className="font-bold text-slate-900">{p.title}</div>
+                              <div className="text-slate-600 truncate text-[11px]">{p.description}</div>
+                            </td>
+                            <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">{p.category}</td>
+                            <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">
+                              {p.district}
+                            </td>
+                            <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">
+                              <StatusBadge status={p.status} />
+                            </td>
+                            <td className="py-2 px-3 text-right whitespace-nowrap space-x-1">
+                              <button
+                                onClick={() => setSelectedProblem(p)}
+                                className="px-2 py-1 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-800 font-semibold rounded"
+                              >
+                                View Details
+                              </button>
+                              <button
+                                onClick={() => handleOpenSubmit(p)}
+                                className="px-2 py-1 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded"
+                              >
+                                Submit Proposal
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
-                  <div className="bg-white p-12 text-center rounded-2xl border border-slate-200">
-                    <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
-                    <h3 className="font-bold text-base text-slate-900">No Pending Assigned Problems</h3>
-                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                      All problems currently assigned to your institution have solutions submitted or are resolved.
-                    </p>
+                  <div className="p-8 text-center text-slate-500">
+                    No active tasks currently assigned to your institution in the database.
                   </div>
                 )}
               </div>
@@ -243,195 +307,167 @@ export const UniversityDashboard = () => {
 
             {/* TAB 2: SUBMITTED SOLUTIONS */}
             {activeTab === 'solutions' && (
-              <div className="space-y-4">
+              <div className="bg-white border border-slate-300 rounded overflow-hidden">
+                <div className="p-2.5 border-b border-slate-200 bg-slate-50 font-bold text-slate-800">
+                  Submitted Technical Proposals & R&D Blueprints
+                </div>
                 {solutions.length > 0 ? (
-                  solutions.map((sol) => (
-                    <div
-                      key={sol._id}
-                      className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3"
-                    >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-700">
-                            Problem: {sol.problemId}
-                          </span>
-                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">
-                            Status: {sol.status}
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-slate-400">
-                          Submitted on: {new Date(sol.createdAt).toLocaleDateString('en-IN')}
-                        </span>
-                      </div>
-
-                      <h3 className="text-base font-bold text-slate-900">
-                        {sol.title}
-                      </h3>
-
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        {sol.description}
-                      </p>
-
-                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-                        <span className="font-bold text-slate-800 block">Technical Methodology:</span>
-                        <p className="text-slate-600">{sol.technicalDetails}</p>
-                        {sol.estimatedResources && (
-                          <p className="text-slate-600 pt-1">
-                            <strong>Estimated Resources/Cost:</strong> {sol.estimatedResources}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="pt-2 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100">
-                        <span>Lead Investigator: <strong>{sol.submittedBy}</strong></span>
-                        <a
-                          href={`/track?id=${sol.problemId}`}
-                          className="text-gov-green hover:underline font-bold"
-                        >
-                          View Public Status →
-                        </a>
-                      </div>
-                    </div>
-                  ))
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
+                        <tr>
+                          <th className="py-2 px-3 border-r border-slate-200">Problem ID</th>
+                          <th className="py-2 px-3 border-r border-slate-200">Proposal Title</th>
+                          <th className="py-2 px-3 border-r border-slate-200">Lead Investigator</th>
+                          <th className="py-2 px-3 border-r border-slate-200">Estimated Budget</th>
+                          <th className="py-2 px-3 border-r border-slate-200">Filing Date</th>
+                          <th className="py-2 px-3">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-slate-800">
+                        {solutions.map((sol) => (
+                          <tr key={sol._id || sol.problemId} className="hover:bg-slate-50">
+                            <td className="py-2 px-3 border-r border-slate-200 font-mono font-bold whitespace-nowrap">
+                              {sol.problemId}
+                            </td>
+                            <td className="py-2 px-3 border-r border-slate-200">
+                              <div className="font-bold text-slate-900">{sol.title}</div>
+                              <div className="text-slate-600 text-[11px] truncate max-w-xs">{sol.description}</div>
+                            </td>
+                            <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">{sol.submittedBy}</td>
+                            <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">{sol.estimatedResources || 'N/A'}</td>
+                            <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">
+                              {sol.createdAt ? new Date(sol.createdAt).toLocaleDateString('en-IN') : 'N/A'}
+                            </td>
+                            <td className="py-2 px-3 whitespace-nowrap font-bold text-slate-700">
+                              {sol.status || 'Submitted'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
-                  <div className="bg-white p-12 text-center rounded-2xl border border-slate-200">
-                    <FileText className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-                    <h3 className="font-bold text-base text-slate-900">No Solutions Submitted Yet</h3>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Select an assigned problem from the tab above to submit a technical proposal.
-                    </p>
+                  <div className="p-8 text-center text-slate-500">
+                    No proposal blueprints filed yet. Select an assigned task to submit one.
                   </div>
                 )}
               </div>
             )}
 
-            {/* TAB 3: PROPOSED SOLUTION SUBMISSION FORM */}
+            {/* TAB 3: FORM SUBMISSION */}
             {activeTab === 'submit' && targetProblem && (
-              <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs max-w-3xl mx-auto space-y-6">
-                <div className="border-b border-slate-200 pb-4">
-                  <span className="text-xs font-bold uppercase text-gov-green">
-                    Technical Solution Blueprint
-                  </span>
-                  <h2 className="text-xl font-bold text-slate-900 mt-0.5">
-                    Proposal for: {targetProblem.problemId} - {targetProblem.title}
+              <div className="bg-white border border-slate-300 p-4 rounded max-w-3xl mx-auto space-y-3">
+                <div className="border-b border-slate-200 pb-2">
+                  <div className="text-[10px] font-bold uppercase text-slate-500">Filing Technical Solution</div>
+                  <h2 className="text-sm font-bold text-slate-900">
+                    Ref: #{targetProblem.problemId || targetProblem._id} - {targetProblem.title}
                   </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Location: {targetProblem.district}, Jharkhand
-                  </p>
                 </div>
 
-                <form onSubmit={handleSubmitSolution} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Solution Title <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={solutionForm.title}
-                      onChange={(e) => setSolutionForm({ ...solutionForm, title: e.target.value })}
-                      className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none"
-                    />
+                <form onSubmit={handleSubmitSolution} className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                        Proposal Title <span className="text-red-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={solutionForm.title}
+                        onChange={(e) => setSolutionForm({ ...solutionForm, title: e.target.value })}
+                        className="w-full p-1.5 border border-slate-300 rounded outline-none focus:border-slate-800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                        Lead Faculty / Department Head <span className="text-red-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={solutionForm.submittedBy}
+                        onChange={(e) => setSolutionForm({ ...solutionForm, submittedBy: e.target.value })}
+                        placeholder="e.g., Dr. A. K. Roy, Dept of Civil Eng."
+                        className="w-full p-1.5 border border-slate-300 rounded outline-none focus:border-slate-800"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Lead Faculty / Student Team Head <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={solutionForm.submittedBy}
-                      onChange={(e) => setSolutionForm({ ...solutionForm, submittedBy: e.target.value })}
-                      placeholder="e.g. Dr. A. K. Roy, Dept of Civil Engineering"
-                      className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Executive Solution Summary <span className="text-rose-500">*</span>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                      Executive Summary <span className="text-red-600">*</span>
                     </label>
                     <textarea
                       required
-                      rows={3}
+                      rows={2}
                       value={solutionForm.description}
                       onChange={(e) => setSolutionForm({ ...solutionForm, description: e.target.value })}
-                      placeholder="Brief summary of how this solution addresses the community issue..."
-                      className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none"
+                      placeholder="Summary of proposed solution..."
+                      className="w-full p-1.5 border border-slate-300 rounded outline-none focus:border-slate-800"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Detailed Technical Methodology & Specifications <span className="text-rose-500">*</span>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                      Technical Methodology & Specifications <span className="text-red-600">*</span>
                     </label>
                     <textarea
                       required
                       rows={4}
                       value={solutionForm.technicalDetails}
                       onChange={(e) => setSolutionForm({ ...solutionForm, technicalDetails: e.target.value })}
-                      placeholder="Detail the technical schematics, hardware components, civil measurements, or digital architecture proposed by the university team..."
-                      className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none font-mono"
+                      placeholder="Provide technical specs, materials needed, digital architecture, or execution blueprint..."
+                      className="w-full p-1.5 border border-slate-300 rounded font-mono outline-none focus:border-slate-800"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Estimated Budget / Resources Required
+                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                        Estimated Budget / Cost
                       </label>
                       <input
                         type="text"
                         value={solutionForm.estimatedResources}
                         onChange={(e) => setSolutionForm({ ...solutionForm, estimatedResources: e.target.value })}
-                        placeholder="e.g. ₹ 3,50,000 (Materials + Fabrication)"
-                        className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none"
+                        placeholder="e.g. ₹ 3,50,000"
+                        className="w-full p-1.5 border border-slate-300 rounded outline-none focus:border-slate-800"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Supporting Documents / Blueprints URL
+                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                        Blueprint / Document Link
                       </label>
                       <input
                         type="text"
                         value={solutionForm.documents}
                         onChange={(e) => setSolutionForm({ ...solutionForm, documents: e.target.value })}
                         placeholder="https://drive.google.com/..."
-                        className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none"
+                        className="w-full p-1.5 border border-slate-300 rounded outline-none focus:border-slate-800"
                       />
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
+                  <div className="pt-2 border-t border-slate-200 flex items-center justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => {
                         setTargetProblem(null);
                         setActiveTab('assigned');
                       }}
-                      className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                      className="px-3 py-1 border border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded"
                     >
                       Cancel
                     </button>
-
                     <button
                       type="submit"
                       disabled={submittingSolution}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-gov-green hover:bg-gov-darkgreen disabled:opacity-50 transition shadow-sm cursor-pointer"
+                      className="px-4 py-1 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-bold rounded"
                     >
-                      {submittingSolution ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Submitting to District Administration...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          <span>Submit Solution to Government</span>
-                        </>
-                      )}
+                      {submittingSolution ? 'Submitting Proposal...' : 'Submit Official Proposal'}
                     </button>
                   </div>
                 </form>
@@ -439,6 +475,7 @@ export const UniversityDashboard = () => {
             )}
           </>
         )}
+
       </div>
     </div>
   );

@@ -38,13 +38,13 @@ const seedInitialData = async () => {
     // 2. Seed Partner Universities
     const universitiesSeed = [
       {
-        name: 'Birla Institute of Technology (BIT) Mesra',
-        email: 'bitmesra@jharkhand.edu.in',
+        name: 'Govenment Engineering College Palamu',
+        email: 'gecp@jharkhand.edu.in',
         mobile: '9431122001',
         password: 'University@2026',
         role: 'university',
-        institutionName: 'BIT Mesra, Ranchi',
-        district: 'Ranchi',
+        institutionName: 'GEC Palamu, Palamu',
+        district: 'Palamu',
         status: 'active',
       },
       {
@@ -89,14 +89,14 @@ const seedInitialData = async () => {
       },
     ];
 
-    for (const uni of universitiesSeed) {
-      const exists = await User.findOne({ email: uni.email });
-      if (!exists) {
-        const u = new User(uni);
-        await u.save();
-        console.log(`[Seed] University account seeded: ${uni.name} (${uni.email})`);
-      }
-    }
+  universitiesSeed.forEach(async (uni) => {
+  const exists = await User.findOne({ email: uni.email });
+  if (!exists) {
+    const u = new User(uni);
+    await u.save();
+    console.log(`[Seed] University account seeded: ${uni.name} (${uni.email})`);
+  }
+});
 
     // 3. Seed Realistic Community Problems across Jharkhand
     const problemCount = await Problem.countDocuments();

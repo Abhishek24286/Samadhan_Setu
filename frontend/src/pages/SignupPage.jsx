@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, Lock, Building2, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Phone, Lock, AlertCircle, Loader2 } from 'lucide-react';
 
 export const SignupPage = () => {
   const navigate = useNavigate();
@@ -16,10 +16,9 @@ export const SignupPage = () => {
     userType: 'citizen', // 'citizen' | 'university' | 'admin'
     institutionName: '',
     district: 'Ranchi',
-    // New University fields
     registrationNumber: '',
     address: '',
-    expertiseTags: '', // We'll split this by comma before sending
+    expertiseTags: '',
     serviceLocation: '',
     contactPerson: '',
   });
@@ -67,7 +66,6 @@ export const SignupPage = () => {
       return;
     }
 
-    // STRICT CHECK: Reject any attempt to tamper with admin role
     if (formData.userType === 'admin') {
       setErrorMsg('Unauthorized role selection. Government administrator accounts are restricted.');
       return;
@@ -83,7 +81,7 @@ export const SignupPage = () => {
           mobile: formData.mobile,
           district: formData.district,
           otp: otp,
-          password: formData.password || '' // Optional for OTP
+          password: formData.password || ''
         });
       } else {
         newUser = await signup({
@@ -117,10 +115,10 @@ export const SignupPage = () => {
   };
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-12 sm:py-16">
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+    <div className="w-full min-h-screen bg-slate-50 text-slate-900 px-4 py-12 sm:py-16">
+      <div className="max-w-lg mx-auto bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
         <div className="text-center space-y-1">
-          <div className="w-12 h-12 rounded-full bg-emerald-100 text-gov-green flex items-center justify-center mx-auto mb-2 font-black text-sm">
+          <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto mb-2 font-black text-sm">
             झार
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
@@ -139,7 +137,6 @@ export const SignupPage = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* User Type Selection: CITIZEN, UNIVERSITY or ADMIN */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               Select Account Type <span className="text-rose-500">*</span>
@@ -148,8 +145,8 @@ export const SignupPage = () => {
               <label
                 className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2.5 cursor-pointer transition ${
                   formData.userType === 'citizen'
-                    ? 'border-gov-green bg-emerald-50/70 text-gov-darkgreen font-bold shadow-2xs'
-                    : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                    ? 'border-emerald-700 bg-emerald-50/70 text-emerald-900 font-bold'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
                 }`}
               >
                 <input
@@ -161,7 +158,7 @@ export const SignupPage = () => {
                     setFormData({ ...formData, userType: 'citizen' });
                     setUseOtp(false);
                   }}
-                  className="text-gov-green focus:ring-gov-green"
+                  className="text-emerald-700 focus:ring-emerald-700"
                 />
                 <span>Citizen / Student</span>
               </label>
@@ -169,8 +166,8 @@ export const SignupPage = () => {
               <label
                 className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2.5 cursor-pointer transition ${
                   formData.userType === 'university'
-                    ? 'border-gov-green bg-emerald-50/70 text-gov-darkgreen font-bold shadow-2xs'
-                    : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                    ? 'border-emerald-700 bg-emerald-50/70 text-emerald-900 font-bold'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
                 }`}
               >
                 <input
@@ -182,7 +179,7 @@ export const SignupPage = () => {
                     setFormData({ ...formData, userType: 'university' });
                     setUseOtp(false);
                   }}
-                  className="text-gov-green focus:ring-gov-green"
+                  className="text-emerald-700 focus:ring-emerald-700"
                 />
                 <span>University</span>
               </label>
@@ -190,8 +187,8 @@ export const SignupPage = () => {
               <label
                 className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2.5 cursor-pointer transition ${
                   formData.userType === 'admin'
-                    ? 'border-gov-green bg-emerald-50/70 text-gov-darkgreen font-bold shadow-2xs'
-                    : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                    ? 'border-emerald-700 bg-emerald-50/70 text-emerald-900 font-bold'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
                 }`}
               >
                 <input
@@ -203,36 +200,34 @@ export const SignupPage = () => {
                     setFormData({ ...formData, userType: 'admin' });
                     setUseOtp(false);
                   }}
-                  className="text-gov-green focus:ring-gov-green"
+                  className="text-emerald-700 focus:ring-emerald-700"
                 />
                 <span>Dist. Collectorate</span>
               </label>
             </div>
           </div>
 
-          {/* Toggle for OTP (Citizen only) */}
           {formData.userType === 'citizen' && (
             <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
               <button
                 type="button"
                 onClick={() => { setUseOtp(false); setOtpSent(false); setOtp(''); }}
-                className={`flex-1 text-xs font-bold py-2 rounded-lg transition ${!useOtp ? 'bg-white shadow-sm text-gov-green' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 text-xs font-bold py-2 rounded-lg transition ${!useOtp ? 'bg-white shadow-xs text-emerald-800' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 Register with Password
               </button>
               <button
                 type="button"
                 onClick={() => { setUseOtp(true); }}
-                className={`flex-1 text-xs font-bold py-2 rounded-lg transition ${useOtp ? 'bg-white shadow-sm text-gov-green' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 text-xs font-bold py-2 rounded-lg transition ${useOtp ? 'bg-white shadow-xs text-emerald-800' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 Register with OTP
               </button>
             </div>
           )}
 
-          {/* Institution Name if University */}
           {formData.userType === 'university' && (
-            <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-200 space-y-4 animate-in fade-in">
+            <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-200 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-blue-900 mb-1">
                   Official College / University Name <span className="text-rose-500">*</span>
@@ -243,7 +238,7 @@ export const SignupPage = () => {
                   value={formData.institutionName}
                   onChange={(e) => setFormData({ ...formData, institutionName: e.target.value })}
                   placeholder="e.g., Birla Institute of Technology, Mesra"
-                  className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white"
+                  className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white text-slate-900"
                 />
               </div>
 
@@ -258,7 +253,7 @@ export const SignupPage = () => {
                     value={formData.registrationNumber}
                     onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
                     placeholder="Govt/AICTE Reg No."
-                    className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white"
+                    className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white text-slate-900"
                   />
                 </div>
                 <div>
@@ -270,7 +265,7 @@ export const SignupPage = () => {
                     value={formData.serviceLocation}
                     onChange={(e) => setFormData({ ...formData, serviceLocation: e.target.value })}
                     placeholder="City / Region"
-                    className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white"
+                    className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white text-slate-900"
                   />
                 </div>
               </div>
@@ -284,7 +279,7 @@ export const SignupPage = () => {
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder="Full institutional address"
-                  className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white"
+                  className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white text-slate-900"
                 />
               </div>
 
@@ -297,7 +292,7 @@ export const SignupPage = () => {
                   value={formData.expertiseTags}
                   onChange={(e) => setFormData({ ...formData, expertiseTags: e.target.value })}
                   placeholder="e.g., Civil Engineering, Water Management"
-                  className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white"
+                  className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white text-slate-900"
                 />
               </div>
 
@@ -310,17 +305,12 @@ export const SignupPage = () => {
                   value={formData.contactPerson}
                   onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
                   placeholder="Name of nodal point of contact"
-                  className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white"
+                  className="w-full text-xs p-2.5 rounded-lg border border-blue-300 focus:border-blue-600 outline-none bg-white text-slate-900"
                 />
               </div>
-
-              <p className="text-[10px] text-blue-700 font-medium">
-                * Account will be verified by district administration prior to solution assignment.
-              </p>
             </div>
           )}
 
-          {/* Full Name */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               {formData.userType === 'university' ? 'Nodal Officer / Representative Name' : 'Full Name'}{' '}
@@ -334,12 +324,11 @@ export const SignupPage = () => {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., Rameshwar Mahato"
-                className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none"
+                className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 outline-none bg-white text-slate-900"
               />
             </div>
           </div>
 
-          {/* Email and Mobile */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(!useOtp || formData.userType === 'university' || formData.userType === 'admin') && (
               <div>
@@ -354,7 +343,7 @@ export const SignupPage = () => {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder={formData.userType === 'admin' ? 'name@jharkhand.gov.in' : 'name@example.com'}
-                    className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none"
+                    className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 outline-none bg-white text-slate-900"
                   />
                 </div>
               </div>
@@ -373,13 +362,12 @@ export const SignupPage = () => {
                   onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                   placeholder="10-digit mobile"
                   disabled={useOtp && otpSent}
-                  className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none"
+                  className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 outline-none bg-white text-slate-900 disabled:bg-slate-100"
                 />
               </div>
             </div>
           </div>
 
-          {/* District */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               District (Jharkhand) <span className="text-rose-500">*</span>
@@ -387,7 +375,7 @@ export const SignupPage = () => {
             <select
               value={formData.district}
               onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none bg-white"
+              className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 outline-none bg-white text-slate-900"
             >
               {districts.map((d) => (
                 <option key={d} value={d}>
@@ -397,7 +385,6 @@ export const SignupPage = () => {
             </select>
           </div>
 
-          {/* Password and Confirm Password */}
           {(!useOtp || formData.userType === 'university' || formData.userType === 'admin') && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -412,7 +399,7 @@ export const SignupPage = () => {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="Min 6 characters"
-                    className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none"
+                    className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 outline-none bg-white text-slate-900"
                   />
                 </div>
               </div>
@@ -429,14 +416,13 @@ export const SignupPage = () => {
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                     placeholder="Confirm password"
-                    className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none"
+                    className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 outline-none bg-white text-slate-900"
                   />
                 </div>
               </div>
             </div>
           )}
 
-          {/* Optional password for OTP users */}
           {useOtp && (
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -449,7 +435,7 @@ export const SignupPage = () => {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Set an optional password"
-                  className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none"
+                  className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 outline-none bg-white text-slate-900"
                 />
               </div>
             </div>
@@ -469,11 +455,11 @@ export const SignupPage = () => {
                   onChange={(e) => setOtp(e.target.value)}
                   placeholder="123456"
                   maxLength={6}
-                  className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none font-mono tracking-widest"
+                  className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100 outline-none font-mono tracking-widest bg-white text-slate-900"
                 />
               </div>
               <div className="text-right mt-1">
-                <button type="button" onClick={handleSendOtp} className="text-[10px] text-gov-green hover:underline">
+                <button type="button" onClick={handleSendOtp} className="text-[10px] text-emerald-700 hover:underline font-bold">
                   Resend OTP
                 </button>
               </div>
@@ -485,7 +471,7 @@ export const SignupPage = () => {
               type="button"
               onClick={handleSendOtp}
               disabled={loading}
-              className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-gov-green hover:bg-gov-darkgreen disabled:opacity-50 transition shadow-sm cursor-pointer"
+              className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 transition shadow-xs cursor-pointer"
             >
               {loading ? (
                 <span className="inline-flex items-center gap-2">
@@ -500,7 +486,7 @@ export const SignupPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-gov-green hover:bg-gov-darkgreen disabled:opacity-50 transition shadow-sm cursor-pointer"
+              className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 transition shadow-xs cursor-pointer"
             >
               {loading ? (
                 <span className="inline-flex items-center gap-2">
@@ -516,7 +502,7 @@ export const SignupPage = () => {
 
         <div className="pt-4 border-t border-slate-100 text-center text-xs text-slate-500">
           Already registered?{' '}
-          <Link to="/login" className="text-gov-green font-bold hover:underline">
+          <Link to="/login" className="text-emerald-700 font-bold hover:underline">
             Sign in here
           </Link>
         </div>
