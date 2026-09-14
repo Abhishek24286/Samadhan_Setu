@@ -1,6 +1,9 @@
 import express from 'express';
 import { Problem } from '../models/Problem.js';
 import { User } from '../models/User.js';
+import { analyzeProblemWithAI } from '../services/aiService.js';
+import upload from '../middleware/uploadMiddleware.js';
+import { verifyToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -11,13 +14,11 @@ const generateProblemId = async () => {
   return `JH-2026-${nextNumber}`;
 };
 
-// 1. Citizen Report Problem (Public or Logged In)
-router.post('/', async (req, res) => {
+// 1. Citizen Report Problem (Authenticated via verifyToken)
+router.post('/', verifyToken, upload.single('image'), async (req, res) => {
   try {
     const {
-      title,
       description,
-      category,
       district,
       block,
       village,
@@ -27,20 +28,31 @@ router.post('/', async (req, res) => {
       citizenEmail,
     } = req.body;
 
-    if (!title || !description || !category || !district || !location || !citizenName || !citizenMobile) {
+    if (!description || !district || !location || !citizenName || !citizenMobile) {
       return res.status(400).json({
         success: false,
-        message: 'Please complete all required fields (title, description, category, district, location, your name, and mobile).',
+        message: 'Please complete all required fields (description, district, location, name, and mobile).',
       });
     }
 
+    // Process image buffer and text with Gemini AI
+    const imageBuffer = req.file ? req.file.buffer : null;
+    const mimeType = req.file ? req.file.mimetype : null;
+
+    const aiResult = await analyzeProblemWithAI(description, imageBuffer, mimeType);
     const problemId = await generateProblemId();
 
     const newProblem = new Problem({
       problemId,
-      title,
+      title: aiResult.title,
+      category: aiResult.category,
       description,
-      category,
+      aiMetadata: {
+        severity: aiResult.severity,
+        tags: aiResult.tags,
+        summary: aiResult.summary,
+      },
+      imageUrl: req.file ? `/uploads/${req.file.filename}` : '',
       district,
       block: block || 'Sadar Block',
       village: village || 'Panchayat Area',
@@ -48,12 +60,13 @@ router.post('/', async (req, res) => {
       citizenName,
       citizenMobile,
       citizenEmail: citizenEmail || '',
+      reportedBy: req.user._id, // Set from authMiddleware
       status: 'Submitted',
       timeline: [
         {
           status: 'Submitted',
-          message: 'Community problem registered successfully by citizen. Queued for administrative scrutiny.',
-          updatedBy: 'Citizen',
+          message: `Community problem registered successfully. Auto-generated title: "${aiResult.title}" | Category: '${aiResult.category}'.`,
+          updatedBy: req.user.name || 'Citizen',
           createdAt: new Date(),
         },
       ],
@@ -63,7 +76,7 @@ router.post('/', async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Your community problem has been registered with the Government of Jharkhand portal.',
+      message: 'Your problem has been registered and auto-categorized by AI.',
       problemId,
       problem: newProblem,
     });
@@ -76,7 +89,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// 2. Track Problem by Reference ID (e.g., JH-2026-000001)
+// 2. Track Problem by Reference ID
 router.get('/track/:problemId', async (req, res) => {
   try {
     const { problemId } = req.params;
@@ -103,10 +116,9 @@ router.get('/track/:problemId', async (req, res) => {
   }
 });
 
-// 3. Slider / Carousel Feed: Real Work in Progress & Community Solutions
+// 3. Slider / Carousel Feed
 router.get('/slider', async (req, res) => {
   try {
-    // Return sample active / resolved work across districts for the homepage slider
     const items = await Problem.find({
       status: { $in: ['Under Review', 'Approved', 'Assigned', 'Solution Proposed', 'Work in Progress', 'Resolved'] },
     })
@@ -127,7 +139,7 @@ router.get('/slider', async (req, res) => {
   }
 });
 
-// 4. Platform Aggregated Statistics (Real numbers from DB)
+// 4. Platform Aggregated Statistics
 router.get('/stats', async (req, res) => {
   try {
     const totalReported = await Problem.countDocuments();
@@ -144,7 +156,7 @@ router.get('/stats', async (req, res) => {
         problemsReported: totalReported,
         problemsResolved: totalResolved,
         problemsInProgress: inProgress,
-        districtsCovered: Math.max(districtsCount.length, 24), // 24 districts in Jharkhand
+        districtsCovered: Math.max(districtsCount.length, 24),
         universitiesParticipating: Math.max(universitiesCount, 5),
       },
     });

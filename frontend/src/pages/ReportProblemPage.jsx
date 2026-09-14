@@ -324,7 +324,7 @@ export const ReportProblemPage = () => {
               </h3> */}
 
               <div className="space-y-3">
-                <div>
+                {/* <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Problem Title / Subject <span className="text-rose-500">*</span>
                   </label>
@@ -336,10 +336,10 @@ export const ReportProblemPage = () => {
                     placeholder="e.g., Drinking water shortage and borewell failure in rural village"
                     className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:border-gov-green focus:ring-2 focus:ring-emerald-100 outline-none font-medium"
                   />
-                </div>
+                </div> */}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
+                  {/* <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Problem Category <span className="text-rose-500">*</span>
                     </label>
@@ -354,7 +354,7 @@ export const ReportProblemPage = () => {
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </div> */}
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">

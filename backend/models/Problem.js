@@ -42,7 +42,7 @@ const problemSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      required: true,
+      // Removed `required: true` so AI can assign this on backend creation
       enum: [
         'Drinking Water',
         'Roads & Transport',
@@ -56,6 +56,32 @@ const problemSchema = new mongoose.Schema(
         'Other'
       ],
       default: 'Other',
+    },
+    
+    // NEW: AI Metadata Fields
+    aiMetadata: {
+      severity: {
+        type: String,
+        enum: ['Low', 'Medium', 'High', 'Critical'],
+        default: 'Medium',
+      },
+      tags: {
+        type: [String],
+        default: [],
+      },
+      summary: {
+        type: String,
+        default: '',
+      },
+      confidenceScore: {
+        type: Number,
+        default: 0,
+      },
+    },
+
+    imageUrl: {
+      type: String,
+      default: '',
     },
     district: {
       type: String,
