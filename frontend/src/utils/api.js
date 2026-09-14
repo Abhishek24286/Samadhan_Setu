@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://samadhansetu-backend.onrender.com/api';
+const API_BASE_URL = 'https://samadhan-setu-f7pe.onrender.com/api';
 
 export const apiRequest = async (endpoint, options = {}) => {
   const token = localStorage.getItem('jh_token');
