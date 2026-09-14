@@ -12,26 +12,43 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Dynamic Allowed Origins for CORS
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  process.env.CLIENT_URL // Vercel frontend URL set in Render Environment Variables
+].filter(Boolean);
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, or Postman)
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS policy violation: ${origin} not allowed`));
+    }
+  },
   credentials: true,
 }));
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/problems', problemRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/university', universityRoutes);
 
-// Health Check
+// Health Check Endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
     platform: 'SamadhanSetu - Jharkhand Citizen & Community Problem Redressal Platform',
     status: 'Operational',
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
     stack: {
       frontend: 'React + Vite',
       backend: 'Node.js + Express.js',
@@ -42,7 +59,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-
+// 404 Route Handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -53,19 +70,24 @@ app.use((req, res) => {
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error('[Server Error]:', err.stack);
-  res.status(500).json({
+  res.status(err.status || 500).json({
     success: false,
-    message: 'Internal server error.',
+    message: err.message || 'Internal server error.',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined,
   });
 });
 
-// Connect to Database and start server
+// Database Connection and Server Boot
 const startServer = async () => {
-  await connectDB();
-  app.listen(PORT, () => {
-    console.log(`[Server] SamadhanSetu Backend Server running on http://localhost:${PORT}`);
-  });
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log(`[Server] SamadhanSetu Backend Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('[Server Start Error]:', error);
+    process.exit(1);
+  }
 };
 
 startServer();
