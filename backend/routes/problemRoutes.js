@@ -2,6 +2,7 @@ import express from 'express';
 import { Problem } from '../models/Problem.js';
 import { User } from '../models/User.js';
 import { analyzeProblemWithAI } from '../services/aiService.js';
+import { routeProblemToUniversities } from '../services/routingService.js';
 import upload from '../middleware/uploadMiddleware.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 
@@ -74,9 +75,12 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
 
     await newProblem.save();
 
+    // AUTOMATIC EXPERTISE-BASED ROUTING TO UNIVERSITIES
+    await routeProblemToUniversities(problemId, aiResult.category, aiResult.tags);
+
     return res.status(201).json({
       success: true,
-      message: 'Your problem has been registered and auto-categorized by AI.',
+      message: 'Your problem has been registered, auto-categorized by AI, and routed to an expert university.',
       problemId,
       problem: newProblem,
     });

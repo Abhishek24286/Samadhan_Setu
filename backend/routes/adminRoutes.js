@@ -316,4 +316,53 @@ router.get('/solutions', async (req, res) => {
   }
 });
 
+// 9. Admin Review and Status Update for a University Solution (NEW)
+router.patch('/solutions/:solutionId/status', async (req, res) => {
+  try {
+    const { solutionId } = req.params;
+    const { status, remarks } = req.body; // status: 'Proposed', 'Under Review', 'Approved', 'Implemented'
+
+    const validStatuses = ['Proposed', 'Under Review', 'Approved', 'Implemented'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status type provided.' });
+    }
+
+    const solution = await Solution.findById(solutionId);
+    if (!solution) {
+      return res.status(404).json({ success: false, message: 'Solution record not found.' });
+    }
+
+    solution.status = status;
+    await solution.save();
+
+    // Find the corresponding problem to update its status and timeline automatically
+    const problem = await Problem.findById(solution.problemRef);
+    if (problem) {
+      if (status === 'Approved') problem.status = 'Work in Progress';
+      if (status === 'Implemented') problem.status = 'Resolved';
+
+      problem.timeline.push({
+        status: status === 'Implemented' ? 'Resolved' : 'Work in Progress',
+        message: remarks || `Administrative update on solution "${solution.title}": Status set to '${status}'.`,
+        updatedBy: req.user.name || 'Government Administrator',
+        createdAt: new Date(),
+      });
+
+      await problem.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Solution status successfully updated to '${status}'.`,
+      solution,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update solution status.',
+      error: error.message,
+    });
+  }
+});
+
 export default router;

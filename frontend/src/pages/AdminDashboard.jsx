@@ -25,12 +25,19 @@ export const AdminDashboard = () => {
     setLoading(true);
     try {
       const res = await apiRequest('/admin/problems');
+      let fetchedProblems = [];
       if (res && res.success && res.problems) {
-        setProblems(res.problems);
+        fetchedProblems = res.problems;
       } else if (Array.isArray(res)) {
-        setProblems(res);
-      } else {
-        setProblems([]);
+        fetchedProblems = res;
+      }
+      setProblems(fetchedProblems);
+
+      if (selectedProblem) {
+        const updatedCurrent = fetchedProblems.find(
+          (p) => (p._id || p.problemId) === (selectedProblem._id || selectedProblem.problemId)
+        );
+        if (updatedCurrent) setSelectedProblem(updatedCurrent);
       }
     } catch (err) {
       console.error('Failed to load portal data:', err.message);
@@ -50,9 +57,13 @@ export const AdminDashboard = () => {
     const matchesDistrict = selectedDistrict === 'All' || p.district === selectedDistrict;
 
     let matchesTab = true;
-    if (activeTab === 'pending') matchesTab = p.status === 'Submitted' || p.status === 'Under Review';
-    if (activeTab === 'assigned') matchesTab = p.status === 'Assigned' || p.status === 'Work in Progress' || p.status === 'Solution Proposed';
-    if (activeTab === 'resolved') matchesTab = p.status === 'Resolved';
+    if (activeTab === 'pending') {
+      matchesTab = p.status === 'Submitted' || p.status === 'Under Review' || p.status === 'Approved';
+    } else if (activeTab === 'assigned') {
+      matchesTab = p.status === 'Assigned' || p.status === 'Work in Progress' || p.status === 'Solution Proposed';
+    } else if (activeTab === 'resolved') {
+      matchesTab = p.status === 'Resolved' || p.status === 'Rejected';
+    }
 
     return matchesCategory && matchesDistrict && matchesTab;
   });
@@ -60,22 +71,21 @@ export const AdminDashboard = () => {
   const categories = ['All', ...new Set(problems.map((p) => p.category).filter(Boolean))];
   const districts = ['All', ...new Set(problems.map((p) => p.district).filter(Boolean))];
 
-  // Pie Chart Calculations
+  // Calculations for Status Pie Chart
   const statusCounts = problems.reduce((acc, p) => {
     acc[p.status] = (acc[p.status] || 0) + 1;
     return acc;
   }, {});
 
-  const pieSegments = [
-    { label: 'Submitted / Review', count: (statusCounts['Submitted'] || 0) + (statusCounts['Under Review'] || 0), color: '#0f172a' },
-    { label: 'In Execution', count: (statusCounts['Assigned'] || 0) + (statusCounts['Work in Progress'] || 0) + (statusCounts['Solution Proposed'] || 0), color: '#475569' },
-    { label: 'Resolved', count: statusCounts['Resolved'] || 0, color: '#94a3b8' },
-    { label: 'Rejected', count: statusCounts['Rejected'] || 0, color: '#e2e8f0' },
-  ];
-
   const totalSegmentsCount = problems.length || 1;
 
-  // SVG Pie Chart Generator
+  const pieSegments = [
+    { label: 'Submitted / Review', count: (statusCounts['Submitted'] || 0) + (statusCounts['Under Review'] || 0) + (statusCounts['Approved'] || 0), color: '#0f172a' },
+    { label: 'In Execution', count: (statusCounts['Assigned'] || 0) + (statusCounts['Work in Progress'] || 0) + (statusCounts['Solution Proposed'] || 0), color: '#475569' },
+    { label: 'Resolved', count: statusCounts['Resolved'] || 0, color: '#059669' },
+    { label: 'Rejected', count: statusCounts['Rejected'] || 0, color: '#dc2626' },
+  ];
+
   const renderPieSegments = () => {
     let cumulativeAngle = 0;
     return pieSegments.map((segment, index) => {
@@ -93,21 +103,24 @@ export const AdminDashboard = () => {
         ? `M 50 10 A 40 40 0 1 1 49.99 10 Z`
         : `M 50 50 L ${x1} ${y1} A 40 40 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
 
-      return (
-        <path
-          key={index}
-          d={pathData}
-          fill={segment.color}
-          stroke="#ffffff"
-          strokeWidth="1"
-        />
-      );
+      return <path key={index} d={pathData} fill={segment.color} stroke="#ffffff" strokeWidth="1" />;
     });
   };
 
+  // Category and District distribution counts for bar graph visualizations
+  const categoryCounts = categories.filter(c => c !== 'All').map(cat => ({
+    name: cat,
+    count: problems.filter(p => p.category === cat).length
+  }));
+
+  const districtCounts = districts.filter(d => d !== 'All').map(dist => ({
+    name: dist,
+    count: problems.filter(p => p.district === dist).length
+  }));
+
   const pipelineStages = [
     { title: 'Intake Stage', label: 'Submitted', count: statusCounts['Submitted'] || 0 },
-    { title: 'Review Stage', label: 'Under Review', count: statusCounts['Under Review'] || 0 },
+    { title: 'Review Stage', label: 'Under Review', count: (statusCounts['Under Review'] || 0) + (statusCounts['Approved'] || 0) },
     { title: 'Allocation', label: 'Assigned', count: statusCounts['Assigned'] || 0 },
     { title: 'Execution', label: 'In Progress', count: (statusCounts['Work in Progress'] || 0) + (statusCounts['Solution Proposed'] || 0) },
     { title: 'Final Closure', label: 'Resolved', count: statusCounts['Resolved'] || 0 },
@@ -119,7 +132,8 @@ export const AdminDashboard = () => {
 
     setSubmitting(true);
     try {
-      const res = await apiRequest(`/admin/problems/${actionModal.problem._id || actionModal.problem.problemId}/status`, {
+      const problemId = actionModal.problem._id || actionModal.problem.problemId;
+      const res = await apiRequest(`/admin/problems/${problemId}/status`, {
         method: 'PATCH',
         body: JSON.stringify({
           status: statusForm.status,
@@ -130,8 +144,7 @@ export const AdminDashboard = () => {
       if (res && res.success) {
         if (showToast) showToast(`Problem status updated to ${statusForm.status}.`, 'success');
         setActionModal(null);
-        setSelectedProblem(null);
-        fetchData();
+        await fetchData();
       }
     } catch (err) {
       if (showToast) showToast(err.message || 'Failed to update status.', 'error');
@@ -149,10 +162,10 @@ export const AdminDashboard = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="text-[10px] font-mono uppercase tracking-widest text-slate-500 font-bold border-b border-slate-200 pb-1 inline-block">
-                Executive Portal &bull; Central Oversight System
+                Executive Portal &bull; Central Oversight & R&D Monitoring
               </div>
               <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-                State Grievance Allocation & Technical Monitoring Dashboard
+                State Grievance, University R&D & Impact Analytics Dashboard
               </h1>
             </div>
 
@@ -170,26 +183,26 @@ export const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Analytics & Monochrome SVG Pie Chart Panel */}
-        <div className="bg-white border border-slate-300 rounded-md p-5 shadow-sm space-y-3">
+        {/* Analytics & Metrics Grid */}
+        <div className="bg-white border border-slate-300 rounded-md p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-            <h2 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Statewide Analytics & Breakdown</h2>
+            <h2 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Statewide Analytics, Status Breakdown & Distributions</h2>
             <span className="text-[10px] font-mono text-slate-500">Total Entries: {problems.length}</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-            
-            {/* SVG Monochrome Pie Chart */}
-            <div className="md:col-span-6 flex items-center justify-center sm:justify-start gap-8 p-4 bg-slate-50 border border-slate-200 rounded-md">
-              <div className="relative w-36 h-36 flex-shrink-0">
+            {/* Status Pie Chart Breakdown */}
+            <div className="md:col-span-5 flex items-center justify-center sm:justify-start gap-6 p-4 bg-slate-50 border border-slate-200 rounded-md">
+              <div className="relative w-32 h-32 flex-shrink-0">
                 <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                   {renderPieSegments()}
                 </svg>
               </div>
 
-              <div className="space-y-2 text-[11px]">
+              <div className="space-y-1.5 text-[11px]">
+                <span className="font-bold text-slate-700 uppercase text-[9px] block mb-1">Status Distribution</span>
                 {pieSegments.map((segment, idx) => (
-                  <div key={idx} className="flex items-center gap-2.5">
+                  <div key={idx} className="flex items-center gap-2">
                     <span className="w-3 h-3 border border-slate-400 rounded-sm" style={{ backgroundColor: segment.color }} />
                     <span className="text-slate-600 font-medium">{segment.label}:</span>
                     <span className="font-bold font-mono text-slate-900">{segment.count}</span>
@@ -198,36 +211,82 @@ export const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Structured Executive Metric Cards */}
-            <div className="md:col-span-6 grid grid-cols-2 gap-3 text-left">
+            {/* Quick Metrics */}
+            <div className="md:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
               <div className="p-3 bg-slate-50 border border-slate-200 rounded">
-                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">Total Complaints</span>
+                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">Total Submissions</span>
                 <span className="text-xl font-bold font-mono text-slate-900">{problems.length}</span>
               </div>
               <div className="p-3 bg-slate-50 border border-slate-200 rounded">
                 <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">Action Required</span>
                 <span className="text-xl font-bold font-mono text-slate-900">
-                  {(statusCounts['Submitted'] || 0) + (statusCounts['Under Review'] || 0)}
+                  {(statusCounts['Submitted'] || 0) + (statusCounts['Under Review'] || 0) + (statusCounts['Approved'] || 0)}
                 </span>
               </div>
               <div className="p-3 bg-slate-50 border border-slate-200 rounded">
-                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">In Progress</span>
+                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">In Execution</span>
                 <span className="text-xl font-bold font-mono text-slate-900">
                   {(statusCounts['Assigned'] || 0) + (statusCounts['Work in Progress'] || 0) + (statusCounts['Solution Proposed'] || 0)}
                 </span>
               </div>
               <div className="p-3 bg-slate-50 border border-slate-200 rounded">
-                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">Resolution Index</span>
+                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">Resolution Rate</span>
                 <span className="text-xl font-bold font-mono text-slate-900">
                   {problems.length ? Math.round(((statusCounts['Resolved'] || 0) / problems.length) * 100) : 0}%
                 </span>
               </div>
             </div>
+          </div>
 
+          {/* Graphical Distributions (Category & District Visual Graphs) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-200">
+            {/* Category Distribution Graph */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded space-y-2">
+              <span className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">Category-wise Problem Distribution</span>
+              <div className="space-y-1.5 pt-1">
+                {categoryCounts.length > 0 ? categoryCounts.map((cat, idx) => {
+                  const maxCount = Math.max(...categoryCounts.map(c => c.count), 1);
+                  const widthPercent = Math.round((cat.count / maxCount) * 100);
+                  return (
+                    <div key={idx} className="space-y-0.5">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="font-medium text-slate-800 truncate max-w-[200px]">{cat.name}</span>
+                        <span className="font-mono font-bold text-slate-900">{cat.count}</span>
+                      </div>
+                      <div className="w-full bg-slate-200 h-2 rounded-sm overflow-hidden">
+                        <div className="bg-slate-800 h-full rounded-sm" style={{ width: `${widthPercent}%` }}></div>
+                      </div>
+                    </div>
+                  );
+                }) : <div className="text-slate-500 text-center py-2">No category metrics available</div>}
+              </div>
+            </div>
+
+            {/* District Distribution Graph */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded space-y-2">
+              <span className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">District-wise Problem Distribution</span>
+              <div className="space-y-1.5 pt-1">
+                {districtCounts.length > 0 ? districtCounts.map((dist, idx) => {
+                  const maxCount = Math.max(...districtCounts.map(d => d.count), 1);
+                  const widthPercent = Math.round((dist.count / maxCount) * 100);
+                  return (
+                    <div key={idx} className="space-y-0.5">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="font-medium text-slate-800 truncate max-w-[200px]">{dist.name}</span>
+                        <span className="font-mono font-bold text-slate-900">{dist.count}</span>
+                      </div>
+                      <div className="w-full bg-slate-200 h-2 rounded-sm overflow-hidden">
+                        <div className="bg-emerald-700 h-full rounded-sm" style={{ width: `${widthPercent}%` }}></div>
+                      </div>
+                    </div>
+                  );
+                }) : <div className="text-slate-500 text-center py-2">No district metrics available</div>}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Technical Process Flowchart Pipeline */}
+        {/* Workflow Progression Pipeline */}
         <div className="bg-white border border-slate-300 rounded-md p-5 shadow-sm space-y-3">
           <div className="border-b border-slate-200 pb-2">
             <h2 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Workflow Progression Pipeline</h2>
@@ -250,7 +309,7 @@ export const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Category & District Dropdown Filters */}
+        {/* Filters Panel */}
         <div className="bg-white border border-slate-300 rounded-md p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="font-bold text-slate-900 text-xs uppercase tracking-wider">State Records Filter</div>
           <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
@@ -282,7 +341,7 @@ export const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Detailed View Panel matching University Dashboard layout */}
+        {/* Detailed View Panel with University, Outcomes & Social Impact Details */}
         {selectedProblem && (
           <div className="bg-white border border-slate-400 p-5 rounded-md space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
@@ -316,6 +375,33 @@ export const AdminDashboard = () => {
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded">
                   <span className="font-bold text-slate-600 uppercase text-[10px] tracking-wider block mb-1">Detailed Issue Description</span>
                   <p className="text-slate-800 leading-relaxed whitespace-pre-line">{selectedProblem.description}</p>
+                </div>
+
+                {/* University Assignment, Innovation & Expected Outcome Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded space-y-1">
+                    <span className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block border-b border-slate-200 pb-1">University Partnership Details</span>
+                    <div>
+                      <span className="text-slate-500 text-[10px] block">Assigned Institution:</span>
+                      <span className="font-bold text-slate-900">{selectedProblem.assignedUniversityName || selectedProblem.universityName || 'Not yet assigned'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] block">Preliminary Approach Notes:</span>
+                      <span className="text-slate-800 text-[11px]">{selectedProblem.proposalDetails || 'Pending faculty review'}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded space-y-1">
+                    <span className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block border-b border-slate-200 pb-1">Innovation, Outcome & Social Impact</span>
+                    <div>
+                      <span className="text-slate-500 text-[10px] block">Expected R&D Outcome:</span>
+                      <span className="text-slate-800 text-[11px]">{selectedProblem.expectedOutcome || 'Prototype deployment & technical validation'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] block">Social Impact Index:</span>
+                      <span className="font-bold text-emerald-700 text-[11px]">{selectedProblem.socialImpactScore || 'High Priority Civic Intervention'}</span>
+                    </div>
+                  </div>
                 </div>
 
                 {selectedProblem.timeline && selectedProblem.timeline.length > 0 && (
@@ -397,8 +483,7 @@ export const AdminDashboard = () => {
               activeTab === 'pending' ? 'bg-black text-white' : 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-100'
             }`}
           >
-            Pending Review (
-            {problems.filter((p) => p.status === 'Submitted' || p.status === 'Under Review').length})
+            Pending Review ({problems.filter((p) => p.status === 'Submitted' || p.status === 'Under Review' || p.status === 'Approved').length})
           </button>
           <button
             onClick={() => setActiveTab('assigned')}
@@ -406,8 +491,7 @@ export const AdminDashboard = () => {
               activeTab === 'assigned' ? 'bg-black text-white' : 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-100'
             }`}
           >
-            In Execution (
-            {problems.filter((p) => p.status === 'Assigned' || p.status === 'Work in Progress' || p.status === 'Solution Proposed').length})
+            In Execution ({problems.filter((p) => p.status === 'Assigned' || p.status === 'Work in Progress' || p.status === 'Solution Proposed').length})
           </button>
           <button
             onClick={() => setActiveTab('resolved')}
@@ -415,7 +499,7 @@ export const AdminDashboard = () => {
               activeTab === 'resolved' ? 'bg-black text-white' : 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-100'
             }`}
           >
-            Resolved ({problems.filter((p) => p.status === 'Resolved').length})
+            Resolved / Closed ({problems.filter((p) => p.status === 'Resolved' || p.status === 'Rejected').length})
           </button>
         </div>
 
@@ -438,6 +522,7 @@ export const AdminDashboard = () => {
                       <th className="py-2.5 px-3 border-r border-slate-200">Issue & Description</th>
                       <th className="py-2.5 px-3 border-r border-slate-200">Category</th>
                       <th className="py-2.5 px-3 border-r border-slate-200">District</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200">Assigned University</th>
                       <th className="py-2.5 px-3 border-r border-slate-200">Status</th>
                       <th className="py-2.5 px-3 text-right">Actions</th>
                     </tr>
@@ -455,6 +540,9 @@ export const AdminDashboard = () => {
                         <td className="py-2.5 px-3 border-r border-slate-200 whitespace-nowrap">{p.category}</td>
                         <td className="py-2.5 px-3 border-r border-slate-200 whitespace-nowrap font-bold text-slate-900">
                           {p.district}
+                        </td>
+                        <td className="py-2.5 px-3 border-r border-slate-200 whitespace-nowrap text-slate-700 font-medium">
+                          {p.assignedUniversityName || p.universityName || 'Unassigned'}
                         </td>
                         <td className="py-2.5 px-3 border-r border-slate-200 whitespace-nowrap">
                           <StatusBadge status={p.status} />

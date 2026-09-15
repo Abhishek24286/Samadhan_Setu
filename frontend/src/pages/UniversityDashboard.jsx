@@ -5,7 +5,7 @@ import { StatusBadge } from '../components/StatusBadge';
 
 export const UniversityDashboard = () => {
   const { user, showToast } = useAuth();
-  const [activeTab, setActiveTab] = useState('assigned'); // 'assigned' | 'solutions' | 'submit'
+  const [activeTab, setActiveTab] = useState('assigned'); // 'assigned' | 'solutions' | 'submit' | 'propose'
   
   const [problems, setProblems] = useState([]);
   const [solutions, setSolutions] = useState([]);
@@ -14,7 +14,12 @@ export const UniversityDashboard = () => {
   // Detail view state for selected problem
   const [selectedProblem, setSelectedProblem] = useState(null);
 
-  // Form state for submitting proposed solution
+  // Form state for expressing interest / preliminary proposal
+  const [proposalModalProblem, setProposalModalProblem] = useState(null);
+  const [proposalDetails, setProposalDetails] = useState('');
+  const [submittingProposal, setSubmittingProposal] = useState(false);
+
+  // Form state for submitting full technical solution / prototype
   const [targetProblem, setTargetProblem] = useState(null);
   const [solutionForm, setSolutionForm] = useState({
     title: '',
@@ -32,7 +37,7 @@ export const UniversityDashboard = () => {
     try {
       const [probRes, solRes] = await Promise.all([
         apiRequest('/university/my-problems'),
-        apiRequest('/university/my-solutions'),
+        apiRequest('/university/solutions/my-submissions'),
       ]);
 
       if (probRes && probRes.success && probRes.problems) {
@@ -62,10 +67,50 @@ export const UniversityDashboard = () => {
     fetchData();
   }, []);
 
+  // Step 1: Express Interest / Request Admin Sanction
+  const handleExpressInterest = async (e) => {
+    e.preventDefault();
+    if (!proposalModalProblem) return;
+
+    // Safely extract either problemId or _id, falling back gracefully
+    const identifier = proposalModalProblem.problemId || proposalModalProblem._id;
+    
+    if (!identifier) {
+      if (showToast) showToast('Error: Problem identifier is missing.', 'error');
+      console.error('Invalid problem object passed to modal:', proposalModalProblem);
+      return;
+    }
+
+    console.log('Submitting proposal for ID:', identifier);
+
+    setSubmittingProposal(true);
+    try {
+      const res = await apiRequest(`/university/propose/${identifier}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ proposalDetails }),
+      });
+
+      if (res && res.success) {
+        if (showToast) showToast('Interest expressed successfully. Awaiting administrative clearance.', 'success');
+        setProposalModalProblem(null);
+        setProposalDetails('');
+        fetchData();
+      }
+    } catch (err) {
+      console.error('API Error:', err);
+      if (showToast) showToast(err.message || 'Failed to submit expression of interest.', 'error');
+    } finally {
+      setSubmittingProposal(false);
+    }
+  };
+
   const handleOpenSubmit = (problem) => {
     setTargetProblem(problem);
     setSolutionForm({
-      title: `Technical Solution for ${problem.title}`,
+      title: `Prototype Blueprint for ${problem.title}`,
       description: '',
       technicalDetails: '',
       estimatedResources: '₹ ',
@@ -83,6 +128,9 @@ export const UniversityDashboard = () => {
     try {
       const res = await apiRequest('/university/solutions', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           problemId: targetProblem.problemId || targetProblem._id,
           ...solutionForm,
@@ -90,13 +138,13 @@ export const UniversityDashboard = () => {
       });
 
       if (res && res.success) {
-        if (showToast) showToast('Solution blueprint submitted successfully.', 'success');
+        if (showToast) showToast('Technical prototype & funding proposal filed successfully.', 'success');
         setTargetProblem(null);
         setActiveTab('solutions');
         fetchData();
       }
     } catch (err) {
-      if (showToast) showToast(err.message || 'Failed to submit solution.', 'error');
+      if (showToast) showToast(err.message || 'Failed to submit prototype solution.', 'error');
     } finally {
       setSubmittingSolution(false);
     }
@@ -114,7 +162,7 @@ export const UniversityDashboard = () => {
                 Academic Partner Portal &bull; {user?.institutionName || user?.name || 'Institutional Access'}
               </div>
               <h1 className="text-base font-bold text-white tracking-tight">
-                University Task Management & Solution Filing System
+                University Task Management & Prototype R&D System
               </h1>
             </div>
 
@@ -163,26 +211,36 @@ export const UniversityDashboard = () => {
                   </p>
                 </div>
                 <div className="p-2.5 bg-slate-50 border border-slate-200 rounded">
-                  <span className="font-bold text-slate-600 uppercase text-[10px] block mb-1">Detailed Problem Description</span>
+                  <span className="font-bold text-slate-600 uppercase text-[10px] block mb-1">AI & Citizen Problem Overview</span>
                   <p className="text-slate-800 leading-normal whitespace-pre-line">{selectedProblem.description}</p>
                 </div>
               </div>
 
               <div className="p-2.5 bg-slate-50 border border-slate-200 rounded space-y-2">
-                <span className="font-bold text-slate-600 uppercase text-[10px] block border-b border-slate-200 pb-1">Location Details</span>
+                <span className="font-bold text-slate-600 uppercase text-[10px] block border-b border-slate-200 pb-1">Routing & Actions</span>
                 <div>
-                  <span className="text-slate-500 block text-[11px]">District / Block:</span>
-                  <span className="font-semibold text-slate-800">
-                    {selectedProblem.village ? `${selectedProblem.village}, ` : ''}
-                    {selectedProblem.block ? `${selectedProblem.block}, ` : ''}
-                    {selectedProblem.district}
-                  </span>
+                  <span className="text-slate-500 block text-[11px]">Assigned Via:</span>
+                  <span className="font-semibold text-slate-800">{selectedProblem.assignedUniversityName || 'AI Expertise Matching'}</span>
                 </div>
-                <div>
-                  <span className="text-slate-500 block text-[11px]">Full Address:</span>
-                  <span className="text-slate-800">{selectedProblem.location || 'N/A'}</span>
-                </div>
-                <div className="pt-2">
+                
+                {/* LOCKED BUTTON CHECK FOR DETAIL PANEL */}
+                <div className="pt-2 space-y-1.5">
+                  {selectedProblem.status === 'Submitted' || selectedProblem.status === 'Assigned' ? (
+                    <button
+                      onClick={() => {
+                        setProposalModalProblem(selectedProblem);
+                        setSelectedProblem(null);
+                      }}
+                      className="w-full text-center px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded"
+                    >
+                      1. Express Interest & Assign Task
+                    </button>
+                  ) : (
+                    <div className="w-full text-center px-3 py-1 bg-slate-100 border border-slate-300 text-slate-500 font-bold rounded text-[11px]">
+                      ✓ Preliminary Approach Already Logged
+                    </div>
+                  )}
+
                   <button
                     onClick={() => {
                       const prob = selectedProblem;
@@ -191,10 +249,54 @@ export const UniversityDashboard = () => {
                     }}
                     className="w-full text-center px-3 py-1 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded"
                   >
-                    Submit Proposal for This Task
+                    2. Submit Prototype & Funding Request
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal for Expressing Interest */}
+        {proposalModalProblem && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-3">
+            <div className="bg-white border border-slate-300 p-4 rounded max-w-lg w-full space-y-3 shadow-xl">
+              <div className="border-b border-slate-200 pb-2 flex justify-between items-center">
+                <h3 className="font-bold text-slate-900 text-sm">Express Interest: #{proposalModalProblem.problemId}</h3>
+                <button onClick={() => setProposalModalProblem(null)} className="text-slate-500 font-bold">✕</button>
+              </div>
+              <p className="text-slate-600 text-[11px]">
+                By expressing interest, your institution signals readiness to investigate this challenge and seek administrative sanction.
+              </p>
+              <form onSubmit={handleExpressInterest} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Preliminary Approach / Notes <span className="text-red-600">*</span></label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={proposalDetails}
+                    onChange={(e) => setProposalDetails(e.target.value)}
+                    placeholder="Describe how your department plans to approach this problem..."
+                    className="w-full p-1.5 border border-slate-300 rounded outline-none focus:border-slate-800"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setProposalModalProblem(null)}
+                    className="px-3 py-1 border border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingProposal}
+                    className="px-4 py-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold rounded"
+                  >
+                    {submittingProposal ? 'Submitting...' : 'Confirm & Request Sanction'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -209,7 +311,7 @@ export const UniversityDashboard = () => {
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
           >
-            Assigned Tasks ({problems.length})
+            Assigned Inbox ({problems.length})
           </button>
           <button
             onClick={() => setActiveTab('solutions')}
@@ -219,34 +321,22 @@ export const UniversityDashboard = () => {
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
           >
-            Filed Proposals ({solutions.length})
+            Filed Prototypes & Funding Requests ({solutions.length})
           </button>
-          {targetProblem && (
-            <button
-              onClick={() => setActiveTab('submit')}
-              className={`px-3 py-1 font-bold text-xs rounded transition ${
-                activeTab === 'submit'
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              Filing: #{targetProblem.problemId || targetProblem._id}
-            </button>
-          )}
         </div>
 
         {/* Content Section */}
         {loading ? (
           <div className="py-12 text-center bg-white border border-slate-300 rounded text-slate-500 font-medium">
-            Fetching problem records from database...
+            Fetching routed records from database...
           </div>
         ) : (
           <>
-            {/* TAB 1: ASSIGNED PROBLEMS */}
+            {/* TAB 1: ASSIGNED PROBLEMS / INBOX */}
             {activeTab === 'assigned' && (
               <div className="bg-white border border-slate-300 rounded overflow-hidden">
                 <div className="p-2.5 border-b border-slate-200 bg-slate-50 font-bold text-slate-800">
-                  Assigned Community Problems & Technical Requirements
+                  AI-Routed Problems Matching Institutional Expertise
                 </div>
                 {problems.length > 0 ? (
                   <div className="overflow-x-auto">
@@ -254,9 +344,9 @@ export const UniversityDashboard = () => {
                       <thead className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
                         <tr>
                           <th className="py-2 px-3 border-r border-slate-200">ID</th>
-                          <th className="py-2 px-3 border-r border-slate-200">Title & Description</th>
+                          <th className="py-2 px-3 border-r border-slate-200">Problem & AI Tags</th>
                           <th className="py-2 px-3 border-r border-slate-200">Category</th>
-                          <th className="py-2 px-3 border-r border-slate-200">Location</th>
+                          <th className="py-2 px-3 border-r border-slate-200">District</th>
                           <th className="py-2 px-3 border-r border-slate-200">Status</th>
                           <th className="py-2 px-3 text-right">Actions</th>
                         </tr>
@@ -272,9 +362,7 @@ export const UniversityDashboard = () => {
                               <div className="text-slate-600 truncate text-[11px]">{p.description}</div>
                             </td>
                             <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">{p.category}</td>
-                            <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">
-                              {p.district}
-                            </td>
+                            <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">{p.district}</td>
                             <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">
                               <StatusBadge status={p.status} />
                             </td>
@@ -283,13 +371,28 @@ export const UniversityDashboard = () => {
                                 onClick={() => setSelectedProblem(p)}
                                 className="px-2 py-1 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-800 font-semibold rounded"
                               >
-                                View Details
+                                View
                               </button>
+                              
+                              {/* LOCKED BUTTON CHECK FOR TABLE ACTION */}
+                              {p.status === 'Submitted' || p.status === 'Assigned' ? (
+                                <button
+                                  onClick={() => setProposalModalProblem(p)}
+                                  className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded"
+                                >
+                                  Accept & Assign
+                                </button>
+                              ) : (
+                                <span className="px-2 py-1 bg-slate-200 text-slate-600 font-semibold rounded text-[10px]">
+                                  Interest Logged
+                                </span>
+                              )}
+
                               <button
                                 onClick={() => handleOpenSubmit(p)}
                                 className="px-2 py-1 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded"
                               >
-                                Submit Proposal
+                                Submit Prototype
                               </button>
                             </td>
                           </tr>
@@ -299,17 +402,17 @@ export const UniversityDashboard = () => {
                   </div>
                 ) : (
                   <div className="p-8 text-center text-slate-500">
-                    No active tasks currently assigned to your institution in the database.
+                    No active problems currently routed to your institution.
                   </div>
                 )}
               </div>
             )}
 
-            {/* TAB 2: SUBMITTED SOLUTIONS */}
+            {/* TAB 2: SOLUTIONS / PROTOTYPES & FUNDING */}
             {activeTab === 'solutions' && (
               <div className="bg-white border border-slate-300 rounded overflow-hidden">
                 <div className="p-2.5 border-b border-slate-200 bg-slate-50 font-bold text-slate-800">
-                  Submitted Technical Proposals & R&D Blueprints
+                  Filed Prototypes & Funding Requests
                 </div>
                 {solutions.length > 0 ? (
                   <div className="overflow-x-auto">
@@ -317,9 +420,9 @@ export const UniversityDashboard = () => {
                       <thead className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
                         <tr>
                           <th className="py-2 px-3 border-r border-slate-200">Problem ID</th>
-                          <th className="py-2 px-3 border-r border-slate-200">Proposal Title</th>
+                          <th className="py-2 px-3 border-r border-slate-200">Prototype Title</th>
                           <th className="py-2 px-3 border-r border-slate-200">Lead Investigator</th>
-                          <th className="py-2 px-3 border-r border-slate-200">Estimated Budget</th>
+                          <th className="py-2 px-3 border-r border-slate-200">Requested Funding</th>
                           <th className="py-2 px-3 border-r border-slate-200">Filing Date</th>
                           <th className="py-2 px-3">Status</th>
                         </tr>
@@ -335,12 +438,14 @@ export const UniversityDashboard = () => {
                               <div className="text-slate-600 text-[11px] truncate max-w-xs">{sol.description}</div>
                             </td>
                             <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">{sol.submittedBy}</td>
-                            <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">{sol.estimatedResources || 'N/A'}</td>
+                            <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap font-semibold text-emerald-700">
+                              {sol.estimatedResources || 'N/A'}
+                            </td>
                             <td className="py-2 px-3 border-r border-slate-200 whitespace-nowrap">
                               {sol.createdAt ? new Date(sol.createdAt).toLocaleDateString('en-IN') : 'N/A'}
                             </td>
                             <td className="py-2 px-3 whitespace-nowrap font-bold text-slate-700">
-                              {sol.status || 'Submitted'}
+                              {sol.status || 'Proposed'}
                             </td>
                           </tr>
                         ))}
@@ -349,17 +454,17 @@ export const UniversityDashboard = () => {
                   </div>
                 ) : (
                   <div className="p-8 text-center text-slate-500">
-                    No proposal blueprints filed yet. Select an assigned task to submit one.
+                    No prototype blueprints or funding requests filed yet.
                   </div>
                 )}
               </div>
             )}
 
-            {/* TAB 3: FORM SUBMISSION */}
+            {/* TAB 3: PROTOTYPE & FUNDING FORM SUBMISSION */}
             {activeTab === 'submit' && targetProblem && (
               <div className="bg-white border border-slate-300 p-4 rounded max-w-3xl mx-auto space-y-3">
                 <div className="border-b border-slate-200 pb-2">
-                  <div className="text-[10px] font-bold uppercase text-slate-500">Filing Technical Solution</div>
+                  <div className="text-[10px] font-bold uppercase text-slate-500">Prototype & Funding Filing</div>
                   <h2 className="text-sm font-bold text-slate-900">
                     Ref: #{targetProblem.problemId || targetProblem._id} - {targetProblem.title}
                   </h2>
@@ -369,7 +474,7 @@ export const UniversityDashboard = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                        Proposal Title <span className="text-red-600">*</span>
+                        Prototype / Project Title <span className="text-red-600">*</span>
                       </label>
                       <input
                         type="text"
@@ -382,14 +487,14 @@ export const UniversityDashboard = () => {
 
                     <div>
                       <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                        Lead Faculty / Department Head <span className="text-red-600">*</span>
+                        Lead Faculty / Researcher <span className="text-red-600">*</span>
                       </label>
                       <input
                         type="text"
                         required
                         value={solutionForm.submittedBy}
                         onChange={(e) => setSolutionForm({ ...solutionForm, submittedBy: e.target.value })}
-                        placeholder="e.g., Dr. A. K. Roy, Dept of Civil Eng."
+                        placeholder="e.g., Dr. R. K. Sharma"
                         className="w-full p-1.5 border border-slate-300 rounded outline-none focus:border-slate-800"
                       />
                     </div>
@@ -404,21 +509,21 @@ export const UniversityDashboard = () => {
                       rows={2}
                       value={solutionForm.description}
                       onChange={(e) => setSolutionForm({ ...solutionForm, description: e.target.value })}
-                      placeholder="Summary of proposed solution..."
+                      placeholder="Brief overview of the prototype solution..."
                       className="w-full p-1.5 border border-slate-300 rounded outline-none focus:border-slate-800"
                     />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                      Technical Methodology & Specifications <span className="text-red-600">*</span>
+                      Technical Methodology & Architecture <span className="text-red-600">*</span>
                     </label>
                     <textarea
                       required
                       rows={4}
                       value={solutionForm.technicalDetails}
                       onChange={(e) => setSolutionForm({ ...solutionForm, technicalDetails: e.target.value })}
-                      placeholder="Provide technical specs, materials needed, digital architecture, or execution blueprint..."
+                      placeholder="Detail the technical implementation, materials, specs..."
                       className="w-full p-1.5 border border-slate-300 rounded font-mono outline-none focus:border-slate-800"
                     />
                   </div>
@@ -426,26 +531,27 @@ export const UniversityDashboard = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                        Estimated Budget / Cost
+                        Requested Funding / Budget <span className="text-red-600">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         value={solutionForm.estimatedResources}
                         onChange={(e) => setSolutionForm({ ...solutionForm, estimatedResources: e.target.value })}
-                        placeholder="e.g. ₹ 3,50,000"
+                        placeholder="e.g. ₹ 2,50,000"
                         className="w-full p-1.5 border border-slate-300 rounded outline-none focus:border-slate-800"
                       />
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                        Blueprint / Document Link
+                        Blueprint Document Link
                       </label>
                       <input
                         type="text"
                         value={solutionForm.documents}
                         onChange={(e) => setSolutionForm({ ...solutionForm, documents: e.target.value })}
-                        placeholder="https://drive.google.com/..."
+                        placeholder="https://..."
                         className="w-full p-1.5 border border-slate-300 rounded outline-none focus:border-slate-800"
                       />
                     </div>
@@ -467,7 +573,7 @@ export const UniversityDashboard = () => {
                       disabled={submittingSolution}
                       className="px-4 py-1 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-bold rounded"
                     >
-                      {submittingSolution ? 'Submitting Proposal...' : 'Submit Official Proposal'}
+                      {submittingSolution ? 'Submitting Prototype...' : 'Submit Prototype & Funding Request'}
                     </button>
                   </div>
                 </form>

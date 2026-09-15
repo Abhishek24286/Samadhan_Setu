@@ -1,124 +1,159 @@
 import express from 'express';
 import { Problem } from '../models/Problem.js';
-import { Solution } from '../models/Solution.js';
 import { User } from '../models/User.js';
-import { verifyToken, requireRole } from '../middleware/authMiddleware.js';
+import { Solution } from '../models/Solution.js';
+import { verifyToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// 1. Public Directory of Participating Technical Institutions
-router.get('/directory', async (req, res) => {
+// 1. Get assigned inbox items for logged-in university (Handles both /inbox and /my-problems)
+router.get(['/inbox', '/my-problems'], verifyToken, async (req, res) => {
   try {
-    const universities = await User.find({ role: 'university', status: 'active' }).select(
-      'name email mobile institutionName district createdAt'
-    );
-
-    const enriched = await Promise.all(
-      universities.map(async (u) => {
-        const assignedCount = await Problem.countDocuments({ assignedUniversity: u._id });
-        const resolvedCount = await Problem.countDocuments({ assignedUniversity: u._id, status: 'Resolved' });
-        const recentProblems = await Problem.find({ assignedUniversity: u._id })
-          .select('title category district status')
-          .limit(2);
-
-        return {
-          id: u._id,
-          name: u.name,
-          institutionName: u.institutionName || u.name,
-          email: u.email,
-          district: u.district || 'Ranchi',
-          assignedCount,
-          resolvedCount,
-          recentProblems,
-        };
-      })
-    );
-
-    return res.json({
-      success: true,
-      universities: enriched,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve university directory.',
-      error: error.message,
-    });
-  }
-});
-
-// All routes below require University or Admin authentication
-router.use(verifyToken);
-router.use(requireRole('university', 'admin'));
-
-// 2. Get Problems Assigned to the Logged-in University
-router.get('/my-problems', async (req, res) => {
-  try {
-    const query = req.user.role === 'admin' ? {} : { assignedUniversity: req.user._id };
-
-    const problems = await Problem.find(query).sort({ updatedAt: -1 });
-
-    return res.json({
-      success: true,
-      count: problems.length,
-      problems,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch assigned problems.',
-      error: error.message,
-    });
-  }
-});
-
-// 3. Submit Proposed Solution for an Assigned Problem
-router.post('/solutions', async (req, res) => {
-  try {
-    const {
-      problemId,
-      title,
-      description,
-      technicalDetails,
-      estimatedResources,
-      documents,
-      submittedBy,
-    } = req.body;
-
-    if (!problemId || !title || !description || !technicalDetails) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide problem ID, solution title, description, and technical details.',
-      });
+    if (req.user.role !== 'university') {
+      return res.status(403).json({ success: false, message: 'Access denied. University role required.' });
     }
 
-    const problem = await Problem.findOne({ problemId });
+    const university = await User.findById(req.user._id);
+
+    // Fetch problems assigned directly to this university ID or matching their specific expertise tags
+    const problems = await Problem.find({
+      $or: [
+        { assignedUniversity: university._id },
+        { 
+          assignedTo: 'University', 
+          category: { $in: university.expertiseTags } 
+        }
+      ]
+    }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: problems.length,
+      problems
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 2. Express interest and submit an approach/proposal for an assigned problem
+// 2. Express interest and submit an approach/proposal for an assigned problem
+// 2. Express interest and submit a preliminary approach for an assigned problem
+router.patch('/propose/:problemId', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'university') {
+      return res.status(403).json({ success: false, message: 'Access denied. University role required.' });
+    }
+
+    const { problemId } = req.params;
+    const { proposalDetails } = req.body; // University's preliminary approach/notes
+
+    if (!proposalDetails) {
+      return res.status(400).json({ success: false, message: 'Please provide a preliminary approach or notes.' });
+    }
+
+    const university = await User.findById(req.user._id);
+
+    // Find problem by problemId or _id fallback
+    const cleanId = problemId ? problemId.trim() : '';
+    let problem = await Problem.findOne({
+      $or: [
+        { problemId: cleanId },
+        { problemId: cleanId.toUpperCase() }
+      ]
+    });
+
     if (!problem) {
       return res.status(404).json({ success: false, message: 'Problem record not found.' });
     }
 
-    const solution = new Solution({
-      problemId,
+    // Update assignment details without triggering schema enum errors
+    problem.assignedUniversity = university._id;
+    problem.assignedUniversityName = university.institutionName || university.name;
+    
+    // Use an existing enum value like 'Under Review' instead of 'Approval Pending'
+    problem.status = 'Under Review'; 
+    problem.adminRemarks = `University Preliminary Approach: ${proposalDetails}`;
+    
+    // Ensure timeline exists as an array before pushing
+    if (!Array.isArray(problem.timeline)) {
+      problem.timeline = [];
+    }
+
+    problem.timeline.push({
+      status: 'Under Review',
+      message: `${university.institutionName || university.name} submitted a preliminary approach: "${proposalDetails}"`,
+      updatedBy: university.name || 'University Representative',
+      createdAt: new Date(),
+    });
+
+    await problem.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Preliminary approach logged successfully.',
+      problem,
+    });
+  } catch (error) {
+    console.error('[Propose Error]:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 3. Submit a technical solution or prototype for an assigned problem (Maps to Solution schema)
+router.post('/solutions', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'university') {
+      return res.status(403).json({ success: false, message: 'Access denied. University role required.' });
+    }
+
+    const { 
+      problemId,          // String reference (e.g., 'JH-2026-000001')
+      title, 
+      description, 
+      technicalDetails, 
+      estimatedResources, 
+      documents 
+    } = req.body;
+
+    if (!problemId || !title || !description || !technicalDetails) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide the problem ID, title, description, and technical details.' 
+      });
+    }
+
+    // Find the problem document to get its ObjectId reference
+    const problem = await Problem.findOne({ problemId: problemId.trim().toUpperCase() });
+    if (!problem) {
+      return res.status(404).json({ success: false, message: 'Problem record not found.' });
+    }
+
+    const university = await User.findById(req.user._id);
+
+    // Create the new solution entry matching your Solution schema
+    const newSolution = new Solution({
+      problemId: problem.problemId,
       problemRef: problem._id,
-      universityId: req.user._id,
-      submittedBy: submittedBy || req.user.name,
-      institutionName: req.user.institutionName || req.user.name,
+      universityId: university._id,
+      submittedBy: university.name || 'University Faculty/Representative',
+      institutionName: university.institutionName || university.name,
       title,
       description,
       technicalDetails,
-      estimatedResources: estimatedResources || 'As per departmental standards',
+      estimatedResources: estimatedResources || '',
       documents: documents || '',
       status: 'Proposed',
     });
 
-    await solution.save();
+    await newSolution.save();
 
-    // Automatically update problem status to 'Solution Proposed'
+    // Update the parent problem status and append timeline logs
     problem.status = 'Solution Proposed';
     problem.timeline.push({
       status: 'Solution Proposed',
-      message: `Technical solution proposed by ${req.user.institutionName || req.user.name}: "${title}". Pending district administrative review.`,
-      updatedBy: req.user.name,
+      message: `Technical solution proposed by ${university.institutionName || university.name}: "${title}"`,
+      updatedBy: university.name || 'University Representative',
       createdAt: new Date(),
     });
 
@@ -126,36 +161,32 @@ router.post('/solutions', async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Technical solution submitted successfully. District administration has been notified.',
-      solution,
-      problem,
+      message: 'Solution successfully submitted and logged to the problem timeline.',
+      solution: newSolution,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to record solution submission.',
-      error: error.message,
-    });
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 4. Get Solutions Submitted by this University
-router.get('/my-solutions', async (req, res) => {
+// 4. Get all solutions submitted by the logged-in university
+router.get('/solutions/my-submissions', verifyToken, async (req, res) => {
   try {
-    const query = req.user.role === 'admin' ? {} : { universityId: req.user._id };
-    const solutions = await Solution.find(query).sort({ createdAt: -1 });
+    if (req.user.role !== 'university') {
+      return res.status(403).json({ success: false, message: 'Access denied. University role required.' });
+    }
 
-    return res.json({
+    const solutions = await Solution.find({ universityId: req.user._id })
+      .populate('problemRef', 'problemId title district category status')
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
       success: true,
       count: solutions.length,
       solutions,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve submitted solutions.',
-      error: error.message,
-    });
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
