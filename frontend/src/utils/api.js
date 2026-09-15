@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://samadhan-setu-f7pe.onrender.com/api';
 
 export const apiRequest = async (endpoint, options = {}) => {
   // Automatically fix missing leading slashes (e.g., 'auth/login' becomes '/auth/login')
