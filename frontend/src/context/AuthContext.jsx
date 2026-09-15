@@ -48,10 +48,12 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   // Citizen & University Login
+ // Citizen & University Login
   const login = async (emailOrMobile, password) => {
     const res = await apiRequest('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ emailOrMobile, password }),
+      // Fix: Change 'emailOrMobile' to 'identifier' to match the backend route
+      body: JSON.stringify({ identifier: emailOrMobile, password }),
     });
 
     if (res.success && res.token) {

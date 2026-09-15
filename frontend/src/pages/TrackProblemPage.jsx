@@ -242,7 +242,7 @@ export const TrackProblemPage = () => {
             </div>
           </div>
 
-          {/* Visual Status Timeline */}
+          {/* Visual Status Timeline (No District Verification reference) */}
           <ProblemTimeline currentStatus={problem.status} timeline={problem.timeline} />
         </div>
       )}

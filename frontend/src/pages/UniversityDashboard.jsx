@@ -108,9 +108,14 @@ export const UniversityDashboard = () => {
   };
 
   const handleOpenSubmit = (problem) => {
+    if (!problem) {
+      if (showToast) showToast('Error: Problem details are missing.', 'error');
+      return;
+    }
+    
     setTargetProblem(problem);
     setSolutionForm({
-      title: `Prototype Blueprint for ${problem.title}`,
+      title: `Prototype Blueprint for ${problem.title || 'Untitled'}`,
       description: '',
       technicalDetails: '',
       estimatedResources: '₹ ',

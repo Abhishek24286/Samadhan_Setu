@@ -28,7 +28,8 @@ router.post('/signup', async (req, res) => {
   try {
     const { 
       name, email, mobile, password, userType, institutionName, district,
-      registrationNumber, address, expertiseTags, serviceLocation, contactPerson
+      registrationNumber, address, expertiseTags, serviceLocation, contactPerson,
+      aadhaarNumber 
     } = req.body;
 
     if (!name || !email || !mobile || !password) {
@@ -68,6 +69,7 @@ router.post('/signup', async (req, res) => {
       role: assignedRole,
       institutionName: assignedRole === 'university' ? institutionName || name : '',
       district: district || 'Ranchi',
+      aadhaarNumber: assignedRole === 'citizen' ? (aadhaarNumber || undefined) : undefined,
       registrationNumber: assignedRole === 'university' ? registrationNumber : '',
       address: assignedRole === 'university' ? address : '',
       expertiseTags: assignedRole === 'university' ? (expertiseTags || []) : [],
@@ -103,6 +105,13 @@ router.post('/signup', async (req, res) => {
       },
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'A record with this identifier already exists in the system.',
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: 'Failed to process registration.',
@@ -112,29 +121,61 @@ router.post('/signup', async (req, res) => {
 });
 
 // 2. Standard Login (Citizen & University)
+// 2. Standard Login (Citizen & University)
+// 2. Standard Login (Citizen & University)
 router.post('/login', async (req, res) => {
   try {
-    const { emailOrMobile, password } = req.body;
+    // 1. Debug log to see what the frontend is actually sending
+    console.log('Incoming Login Request Body:', req.body);
 
-    if (!emailOrMobile || !password) {
+    const { email, mobile, aadhaarNumber, password, identifier } = req.body;
+
+    // Grab whichever field has a value
+    const loginValue = identifier || email || mobile || aadhaarNumber;
+
+    if (!loginValue || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide your registered email/mobile and password.',
+        message: 'Please provide both an identifier (email/mobile) and a password.',
       });
     }
 
-    // Lookup by email or mobile
-    const user = await User.findOne({
-      $or: [
-        { email: emailOrMobile.toLowerCase() },
-        { mobile: emailOrMobile.trim() },
-      ],
-    });
+    // Build a flexible query to find the user
+    let query = {};
+    const trimmedVal = String(loginValue).trim();
 
+    if (trimmedVal.includes('@')) {
+      query = { email: trimmedVal.toLowerCase() };
+    } else {
+      query = {
+        $or: [
+          { mobile: trimmedVal },
+          { email: trimmedVal.toLowerCase() },
+          { aadhaarNumber: trimmedVal }
+        ]
+      };
+    }
+
+    let user = await User.findOne(query);
+    
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials. No registered account found with these details.',
+        message: 'Invalid credentials or account not found.',
+      });
+    }
+
+    if (user.status === 'disabled') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been disabled. Please contact support.',
+      });
+    }
+
+    if (user.status === 'pending_approval') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is pending district nodal verification approval.',
       });
     }
 
@@ -142,22 +183,15 @@ router.post('/login', async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials. Incorrect password.',
-      });
-    }
-
-    if (user.status === 'disabled') {
-      return res.status(403).json({
-        success: false,
-        message: 'Your account has been deactivated by the administrator.',
+        message: 'Invalid password.',
       });
     }
 
     const token = generateToken(user);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      message: `Welcome back, ${user.name}`,
+      message: 'Logged in successfully.',
       token,
       user: {
         id: user._id,
@@ -170,10 +204,12 @@ router.post('/login', async (req, res) => {
         status: user.status,
       },
     });
+
   } catch (error) {
+    console.error('Login Error Stack:', error);
     return res.status(500).json({
       success: false,
-      message: 'Login service encountered an error.',
+      message: 'Server error during login.',
       error: error.message,
     });
   }
@@ -205,7 +241,6 @@ router.post('/admin-login', async (req, res) => {
       });
     }
 
-    // STRICT ROLE VERIFICATION: Must have role 'admin'
     if (user.role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -257,49 +292,63 @@ router.get('/me', verifyToken, async (req, res) => {
 router.post('/send-otp', async (req, res) => {
   try {
     const { mobile, context } = req.body;
-    if (!mobile) return res.status(400).json({ success: false, message: 'Mobile number is required.' });
+    if (!mobile) return res.status(400).json({ success: false, message: 'Mobile number or identification is required.' });
+
+    const identifier = mobile.trim();
 
     if (context === 'login') {
-      const user = await User.findOne({ mobile: mobile.trim() });
+      const user = await User.findOne({
+        $or: [
+          { mobile: identifier },
+          { aadhaarNumber: identifier }
+        ]
+      }).select('+aadhaarNumber');
+
       if (!user) {
-        return res.status(404).json({ success: false, message: 'No registered account found with this mobile number.' });
-      }
-    } else if (context === 'signup') {
-      const existingUser = await User.findOne({ mobile: mobile.trim() });
-      if (existingUser) {
-        return res.status(400).json({ success: false, message: 'Mobile number already registered.' });
+        return res.status(404).json({ success: false, message: 'No registered account found with this ID/mobile number.' });
       }
     }
 
-    const otp = generateMockOtp(mobile.trim());
+    const otp = generateMockOtp(identifier);
     return res.json({
       success: true,
-      message: 'OTP sent successfully (Check server console).',
-      mockOtp: otp // returning in API for easy testing as requested
+      message: 'OTP sent successfully (Prototype Test OTP: 123456).',
+      mockOtp: otp 
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to send OTP.' });
   }
 });
 
-// 6. Verify OTP Login
+// 6. Verify OTP Login (Updated with 123456 prototype bypass)
 router.post('/verify-otp-login', async (req, res) => {
   try {
     const { mobile, otp } = req.body;
-    const record = otpStore.get(mobile.trim());
+    const identifier = mobile ? mobile.trim() : '';
 
-    if (!record || record.otp !== otp || record.expiresAt < Date.now()) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired OTP.' });
+    const isPrototypeBypass = (otp === '123456');
+    const record = otpStore.get(identifier);
+
+    if (!isPrototypeBypass && (!record || record.otp !== otp || record.expiresAt < Date.now())) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired OTP. (Use 123456 for testing)' });
     }
 
-    const user = await User.findOne({ mobile: mobile.trim() });
-    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    let user = await User.findOne({
+      $or: [
+        { mobile: identifier },
+        { aadhaarNumber: identifier }
+      ]
+    }).select('+aadhaarNumber');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
 
     if (user.status === 'disabled') {
       return res.status(403).json({ success: false, message: 'Account deactivated.' });
     }
 
-    otpStore.delete(mobile.trim());
+    otpStore.delete(identifier);
     const token = generateToken(user);
 
     return res.json({
@@ -318,38 +367,52 @@ router.post('/verify-otp-login', async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'OTP verification failed.' });
+    return res.status(500).json({ success: false, message: 'OTP verification failed.', error: error.message });
   }
 });
 
-// 7. Verify OTP Signup (Citizen only)
+// 7. Verify OTP Signup (Citizen only, updated with 123456 bypass)
 router.post('/verify-otp-signup', async (req, res) => {
   try {
-    const { name, mobile, otp, district, password } = req.body;
-    const record = otpStore.get(mobile.trim());
+    const { name, mobile, otp, district, password, email, aadhaarNumber } = req.body;
+    const identifier = (aadhaarNumber || mobile || '').trim();
 
-    if (!record || record.otp !== otp || record.expiresAt < Date.now()) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
+    const isPrototypeBypass = (otp === '123456');
+    const record = otpStore.get(identifier) || otpStore.get(mobile ? mobile.trim() : '');
+
+    // If it's NOT the bypass code, enforce strict OTP record checks
+    if (!isPrototypeBypass && (!record || record.otp !== otp || record.expiresAt < Date.now())) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP. (Use 123456 for testing)' });
     }
 
-    const existingUser = await User.findOne({ mobile: mobile.trim() });
-    if (existingUser) return res.status(400).json({ success: false, message: 'Mobile already registered.' });
+    const existingUser = await User.findOne({ 
+      $or: [
+        ...(mobile ? [{ mobile: mobile.trim() }] : []),
+        ...(aadhaarNumber ? [{ aadhaarNumber: aadhaarNumber }] : []),
+        ...(email ? [{ email: email.toLowerCase() }] : [])
+      ]
+    });
 
-    const dummyEmail = `${mobile.trim()}@citizen.jharkhand.gov.in`;
-    const finalPassword = password || mobile.trim(); // Default password if not provided
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'An account with this mobile, ID, or email already exists.' });
+    }
+
+    const finalEmail = email ? email.toLowerCase() : `${mobile || 'user'}@citizen.jharkhand.gov.in`;
+    const finalPassword = password || mobile || 'Password123!';
 
     const newUser = new User({
-      name,
-      email: dummyEmail,
-      mobile: mobile.trim(),
+      name: name || 'Citizen User',
+      email: finalEmail,
+      mobile: mobile ? mobile.trim() : '',
       password: finalPassword,
       role: 'citizen',
       district: district || 'Ranchi',
+      aadhaarNumber: aadhaarNumber || undefined,
       status: 'active',
     });
 
     await newUser.save();
-    otpStore.delete(mobile.trim());
+    if (identifier) otpStore.delete(identifier);
     
     const token = generateToken(newUser);
 

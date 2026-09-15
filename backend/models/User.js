@@ -38,6 +38,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // New field for Citizen Identity Verification
+    aadhaarNumber: {
+      type: String,
+      unique: true,
+      sparse: true, // Prevents null/undefined duplicate key collision errors
+      select: false, // Keeps it hidden by default in queries for security
+    },
     // New fields for University
     registrationNumber: {
       type: String,
@@ -63,6 +70,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['active', 'pending_approval', 'disabled'],
       default: 'active',
+    },
+    avatar: {
+      type: String,
+      default: '', 
     },
   },
   {

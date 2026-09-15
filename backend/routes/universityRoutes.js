@@ -6,7 +6,7 @@ import { verifyToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// 1. Get assigned inbox items for logged-in university (Handles both /inbox and /my-problems)
+// 1. Get assigned inbox items for logged-in university
 router.get(['/inbox', '/my-problems'], verifyToken, async (req, res) => {
   try {
     if (req.user.role !== 'university') {
@@ -36,8 +36,6 @@ router.get(['/inbox', '/my-problems'], verifyToken, async (req, res) => {
   }
 });
 
-// 2. Express interest and submit an approach/proposal for an assigned problem
-// 2. Express interest and submit an approach/proposal for an assigned problem
 // 2. Express interest and submit a preliminary approach for an assigned problem
 router.patch('/propose/:problemId', verifyToken, async (req, res) => {
   try {
@@ -46,7 +44,7 @@ router.patch('/propose/:problemId', verifyToken, async (req, res) => {
     }
 
     const { problemId } = req.params;
-    const { proposalDetails } = req.body; // University's preliminary approach/notes
+    const { proposalDetails } = req.body;
 
     if (!proposalDetails) {
       return res.status(400).json({ success: false, message: 'Please provide a preliminary approach or notes.' });
@@ -54,7 +52,6 @@ router.patch('/propose/:problemId', verifyToken, async (req, res) => {
 
     const university = await User.findById(req.user._id);
 
-    // Find problem by problemId or _id fallback
     const cleanId = problemId ? problemId.trim() : '';
     let problem = await Problem.findOne({
       $or: [
@@ -67,15 +64,11 @@ router.patch('/propose/:problemId', verifyToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Problem record not found.' });
     }
 
-    // Update assignment details without triggering schema enum errors
     problem.assignedUniversity = university._id;
     problem.assignedUniversityName = university.institutionName || university.name;
-    
-    // Use an existing enum value like 'Under Review' instead of 'Approval Pending'
     problem.status = 'Under Review'; 
     problem.adminRemarks = `University Preliminary Approach: ${proposalDetails}`;
     
-    // Ensure timeline exists as an array before pushing
     if (!Array.isArray(problem.timeline)) {
       problem.timeline = [];
     }
@@ -100,7 +93,7 @@ router.patch('/propose/:problemId', verifyToken, async (req, res) => {
   }
 });
 
-// 3. Submit a technical solution or prototype for an assigned problem (Maps to Solution schema)
+// 3. Submit a technical solution or prototype for an assigned problem
 router.post('/solutions', verifyToken, async (req, res) => {
   try {
     if (req.user.role !== 'university') {
@@ -108,7 +101,7 @@ router.post('/solutions', verifyToken, async (req, res) => {
     }
 
     const { 
-      problemId,          // String reference (e.g., 'JH-2026-000001')
+      problemId,          
       title, 
       description, 
       technicalDetails, 
@@ -123,7 +116,6 @@ router.post('/solutions', verifyToken, async (req, res) => {
       });
     }
 
-    // Find the problem document to get its ObjectId reference
     const problem = await Problem.findOne({ problemId: problemId.trim().toUpperCase() });
     if (!problem) {
       return res.status(404).json({ success: false, message: 'Problem record not found.' });
@@ -131,7 +123,6 @@ router.post('/solutions', verifyToken, async (req, res) => {
 
     const university = await User.findById(req.user._id);
 
-    // Create the new solution entry matching your Solution schema
     const newSolution = new Solution({
       problemId: problem.problemId,
       problemRef: problem._id,
@@ -148,7 +139,6 @@ router.post('/solutions', verifyToken, async (req, res) => {
 
     await newSolution.save();
 
-    // Update the parent problem status and append timeline logs
     problem.status = 'Solution Proposed';
     problem.timeline.push({
       status: 'Solution Proposed',

@@ -28,6 +28,7 @@ export const AdminLoginPage = () => {
   };
 
   const handleFillSeededAdmin = () => {
+    // Test data for admin login
     setAdminId('admin@jharkhand.gov.in');
     setPassword('Admin@JH2026');
     setErrorMsg('');
@@ -36,13 +37,14 @@ export const AdminLoginPage = () => {
   return (
     <div className="max-w-md mx-auto px-4 py-12 sm:py-16">
       <div className="bg-white rounded-2xl border-2 border-slate-900 p-6 sm:p-8 shadow-xl space-y-6">
+        
         {/* Official Header */}
         <div className="text-center space-y-2 border-b border-slate-100 pb-5">
           <div className="w-14 h-14 rounded-full bg-slate-900 text-amber-400 flex items-center justify-center mx-auto shadow-md">
             <ShieldCheck className="w-8 h-8" />
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gov-green bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
               Government of Jharkhand
             </span>
             <h1 className="text-xl font-black text-slate-900 mt-1">
@@ -120,18 +122,23 @@ export const AdminLoginPage = () => {
           <strong>Security Notice:</strong> All administrative login attempts and IP addresses are audited under the IT Act. Unauthorized access attempts will be blocked automatically.
         </div>
 
-        {/* Evaluator Demo Credential Button */}
+        {/* Evaluator Test Credential Button */}
         <div className="pt-2 border-t border-slate-100 text-center">
           <button
             type="button"
             onClick={handleFillSeededAdmin}
-            className="text-[11px] font-bold text-gov-green hover:underline inline-flex items-center gap-1.5"
-            title="Click to fill seeded Joint Secretary credentials"
+            className="text-[11px] font-bold text-emerald-700 hover:underline inline-flex flex-col items-center gap-0.5 bg-emerald-50 w-full py-2.5 px-3 rounded-lg border border-emerald-200 transition-colors hover:bg-emerald-100"
+            title="Click to fill seeded admin test credentials"
           >
-            <span>Fill Seeded Administrator Account</span>
-            <span className="text-slate-400 font-mono text-[10px]">(admin@jharkhand.gov.in)</span>
+            <span className="flex items-center gap-1.5">
+              <span>⚡ Fill Test Admin Credentials</span>
+            </span>
+            <span className="text-slate-600 font-mono text-[10px]">
+              ID: admin@jharkhand.gov.in | Pass: Admin@JH2026
+            </span>
           </button>
         </div>
+
       </div>
     </div>
   );
