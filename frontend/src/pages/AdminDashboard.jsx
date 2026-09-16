@@ -107,7 +107,6 @@ export const AdminDashboard = () => {
     });
   };
 
-  // Category and District distribution counts for bar graph visualizations
   const categoryCounts = categories.filter(c => c !== 'All').map(cat => ({
     name: cat,
     count: problems.filter(p => p.category === cat).length
@@ -238,9 +237,8 @@ export const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Graphical Distributions (Category & District Visual Graphs) */}
+          {/* Graphical Distributions */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-200">
-            {/* Category Distribution Graph */}
             <div className="p-3 bg-slate-50 border border-slate-200 rounded space-y-2">
               <span className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">Category-wise Problem Distribution</span>
               <div className="space-y-1.5 pt-1">
@@ -262,7 +260,6 @@ export const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* District Distribution Graph */}
             <div className="p-3 bg-slate-50 border border-slate-200 rounded space-y-2">
               <span className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">District-wise Problem Distribution</span>
               <div className="space-y-1.5 pt-1">
@@ -341,7 +338,7 @@ export const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Detailed View Panel with University, Outcomes & Social Impact Details */}
+        {/* Detailed View Panel */}
         {selectedProblem && (
           <div className="bg-white border border-slate-400 p-5 rounded-md space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
@@ -377,7 +374,6 @@ export const AdminDashboard = () => {
                   <p className="text-slate-800 leading-relaxed whitespace-pre-line">{selectedProblem.description}</p>
                 </div>
 
-                {/* University Assignment, Innovation & Expected Outcome Details */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded space-y-1">
                     <span className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block border-b border-slate-200 pb-1">University Partnership Details</span>
@@ -428,6 +424,23 @@ export const AdminDashboard = () => {
               <div className="p-3 bg-slate-50 border border-slate-200 rounded space-y-3 flex flex-col justify-between">
                 <div className="space-y-2 text-[11px]">
                   <span className="font-bold text-slate-600 uppercase text-[10px] tracking-wider block border-b border-slate-200 pb-1">Complainant & District Metadata</span>
+                  
+                  {/* Attached Image Preview (Handles both imageUrl and image keys) */}
+                  {(selectedProblem.imageUrl || selectedProblem.image) && (
+                    <div className="space-y-1 pt-1">
+                      <span className="text-slate-500 block">Attached Evidence / Photo:</span>
+                      <div className="border border-slate-300 rounded overflow-hidden bg-white p-1">
+                        <img 
+                          src={selectedProblem.imageUrl || selectedProblem.image} 
+                          alt="Issue Evidence" 
+                          className="w-full h-36 object-cover rounded hover:opacity-95 transition cursor-pointer"
+                          onClick={() => window.open(selectedProblem.imageUrl || selectedProblem.image, '_blank')}
+                        />
+                        <span className="text-[9px] text-slate-400 block text-center mt-1">Click image to open full size</span>
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <span className="text-slate-500 block">Complainant Name:</span>
                     <span className="font-bold text-slate-800">{selectedProblem.citizenName || 'N/A'}</span>

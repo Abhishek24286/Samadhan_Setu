@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path'; // <-- 1. Import path module
+import { fileURLToPath } from 'url';
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import problemRoutes from './routes/problemRoutes.js';
@@ -8,6 +10,9 @@ import adminRoutes from './routes/adminRoutes.js';
 import universityRoutes from './routes/universityRoutes.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,7 +27,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, or Postman)
     if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
@@ -32,8 +36,15 @@ app.use(cors({
   credentials: true,
 }));
 
+
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 2. Serve uploaded files statically so the frontend can display them via URL
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// (If your upload folder is named 'public' instead of 'uploads', change it above to '/public' and express.static('public'))
 
 // API Routes
 app.use('/api/auth', authRoutes);

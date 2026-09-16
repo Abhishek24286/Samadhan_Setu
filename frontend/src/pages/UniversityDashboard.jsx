@@ -219,6 +219,20 @@ export const UniversityDashboard = () => {
                   <span className="font-bold text-slate-600 uppercase text-[10px] block mb-1">AI & Citizen Problem Overview</span>
                   <p className="text-slate-800 leading-normal whitespace-pre-line">{selectedProblem.description}</p>
                 </div>
+
+                {/* Problem Image Preview Section */}
+                {(selectedProblem.imageUrl || selectedProblem.image) && (
+                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded space-y-1">
+                    <span className="font-bold text-slate-600 uppercase text-[10px] block">Attached Evidence / Problem Image</span>
+                    <div className="overflow-hidden rounded border border-slate-300 bg-slate-900 flex justify-center">
+                      <img 
+                        src={selectedProblem.imageUrl || selectedProblem.image} 
+                        alt={selectedProblem.title || 'Problem Evidence'} 
+                        className="max-h-64 object-contain w-full"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="p-2.5 bg-slate-50 border border-slate-200 rounded space-y-2">

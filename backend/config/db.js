@@ -56,7 +56,7 @@ const seedInitialData = async () => {
         role: 'university',
         institutionName: 'GEC Palamu, Palamu',
         district: 'Palamu',
-        expertise: ['Drinking Water', 'Rural Technology', 'Civil & Structural'],
+        expertise: ['Drinking Water', 'Rural Technology', 'Civil & Structural', 'Roads & Transport', 'Sanitation & Waste', 'Education'],
         status: 'active',
       },
       {
@@ -103,6 +103,39 @@ const seedInitialData = async () => {
         expertise: ['Education', 'Social Welfare', 'Basic Sciences', 'Healthcare'],
         status: 'active',
       },
+      {
+        name: 'Nilamber-Pitamber University, Palamu',
+        email: 'npu@jharkhand.edu.in',
+        mobile: '9431122006',
+        password: 'University@2026',
+        role: 'university',
+        institutionName: 'NPU Medininagar',
+        district: 'Palamu',
+        expertise: ['Drinking Water', 'Roads & Transport', 'Electricity & Power', 'Sanitation & Waste', 'Education', 'Agriculture & Irrigation'],
+        status: 'active',
+      },
+      {
+        name: 'Ranchi University',
+        email: 'ranchiuni@jharkhand.edu.in',
+        mobile: '9431122007',
+        password: 'University@2026',
+        role: 'university',
+        institutionName: 'Ranchi University',
+        district: 'Ranchi',
+        expertise: ['Sanitation & Waste', 'Electricity & Power', 'Public Safety'],
+        status: 'active',
+      },
+      {
+        name: 'Patna University',
+        email: 'patnauni@bihar.edu.in',
+        mobile: '9431122008',
+        password: 'University@2026',
+        role: 'university',
+        institutionName: 'Patna University',
+        district: 'Patna',
+        expertise: ['Drinking Water', 'Healthcare', 'Agriculture & Irrigation'],
+        status: 'active',
+      }
     ];
 
     for (const uni of universitiesSeed) {
@@ -110,61 +143,244 @@ const seedInitialData = async () => {
       if (!exists) {
         const u = new User(uni);
         await u.save();
-        console.log(`[Seed] University seeded with expertise: ${uni.name}`);
+        console.log(`[Seed] University seeded: ${uni.name}`);
       }
     }
 
-    // 3. Seed Realistic Community Problems & Auto-Match based on Expertise
+    // 3. Seed Realistic Community Problems (5 for Palamu, 5 for Other Universities)
     const problemCount = await Problem.countDocuments();
     if (problemCount === 0) {
       const problems = [
+        // ==================== PALAMU PROBLEMS (5 Items) ====================
         {
-          problemId: 'JH-2026-000001',
-          title: 'Drinking water shortage and borewell salinity in rural village',
-          description: 'Severe ground water depletion and seasonal borewell failure affecting over 350 rural families in Chhatarpur block.',
+          problemId: 'JH-2026-PLM-01',
+          title: 'Severe Drinking Water Shortage in Ward 4 Chianki',
+          description: 'The primary tube well has been non-functional for over two weeks, leaving more than 200 households without safe drinking water.',
           category: 'Drinking Water',
+          aiMetadata: {
+            severity: 'High',
+            tags: ['water-crisis', 'tube-well', 'urgent'],
+            summary: 'Tube well failure affecting 200+ households in Ward 4, Palamu.',
+            confidenceScore: 0.92,
+          },
           district: 'Palamu',
-          block: 'Chhatarpur',
-          village: 'Murumdag Panchayat',
-          location: 'Village Ward 4 near Primary School',
-          citizenName: 'Rameshwar Mahato',
-          citizenMobile: '9835012345',
-          status: 'Under Review',
+          block: 'Daltonganj',
+          village: 'Chianki Village',
+          location: 'Near Panchayat Bhawan, Main Road',
+          citizenName: 'Rajesh Kumar',
+          citizenMobile: '9876543210',
+          citizenEmail: 'rajesh.kumar@example.com',
+          status: 'Assigned',
+          imageUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTI4ZjhmIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzMzMyI+UGFsYW11IFdhdGVyIEV2aWRlbmNlPC90ZXh0Pjwvc3ZnPg==',
         },
         {
-          problemId: 'JH-2026-000002',
-          title: 'Solar street lighting required near rural bypass road',
-          description: 'A 2.5 kilometer unlit rural stretch connecting Kanke road with ring road has witnessed multiple night accidents.',
+          problemId: 'JH-2026-PLM-02',
+          title: 'Damaged Road Infrastructure near College Gate',
+          description: 'Large potholes have formed due to recent heavy rains, causing major safety risks for students and daily commuters.',
+          category: 'Roads & Transport',
+          aiMetadata: {
+            severity: 'Medium',
+            tags: ['potholes', 'road-safety', 'infrastructure'],
+            summary: 'Dangerous potholes near college gate requiring immediate repair.',
+            confidenceScore: 0.88,
+          },
+          district: 'Palamu',
+          block: 'Medininagar',
+          village: 'Satbarwa Area',
+          location: 'University Campus Gate No. 2',
+          citizenName: 'Priya Singh',
+          citizenMobile: '9123456789',
+          citizenEmail: 'priya.singh@example.com',
+          status: 'Work in Progress',
+          imageUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjYmVmNmQwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzMzMyI+UGFsYW11IFJvYWQgRXZpZGVuY2U8L3RleHQ+PC9zdmc+',
+        },
+        {
+          problemId: 'JH-2026-PLM-03',
+          title: 'Frequent Power Outages affecting Study Hours',
+          description: 'Transformer failure has caused continuous power outages for the last 4 days, disrupting student academics and local shops.',
           category: 'Electricity & Power',
+          aiMetadata: {
+            severity: 'High',
+            tags: ['power-cut', 'transformer', 'electricity'],
+            summary: 'Transformer breakdown causing prolonged outages in student locality.',
+            confidenceScore: 0.95,
+          },
+          district: 'Palamu',
+          block: 'Patan',
+          village: 'Patan Village',
+          location: 'Market Ward 2',
+          citizenName: 'Amit Oraon',
+          citizenMobile: '9988776655',
+          citizenEmail: '',
+          status: 'Under Review',
+          imageUrl: '',
+        },
+        {
+          problemId: 'JH-2026-PLM-04',
+          title: 'Garbage Accumulation near Community Center',
+          description: 'Uncollected waste is piling up, creating a breeding ground for mosquitoes and unhygienic community conditions.',
+          category: 'Sanitation & Waste',
+          aiMetadata: {
+            severity: 'Medium',
+            tags: ['garbage', 'sanitation', 'health-hazard'],
+            summary: 'Uncollected waste accumulation near the main community center.',
+            confidenceScore: 0.85,
+          },
+          district: 'Palamu',
+          block: 'Hussainabad',
+          village: 'Hussainabad Rural',
+          location: 'Near Old Community Hall',
+          citizenName: 'Sunita Devi',
+          citizenMobile: '9811223344',
+          citizenEmail: 'sunita.devi@example.com',
+          status: 'Solution Proposed',
+          imageUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNkOWJiIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzMzMyI+UGFsYW11IFdhc3RlIEV2aWRlbmNlPC90ZXh0Pjwvc3ZnPg==',
+        },
+        {
+          problemId: 'JH-2026-PLM-05',
+          title: 'Lack of Library Books in Rural Study Center',
+          description: 'The local reading room lacks basic educational textbooks and study furniture for competitive exam aspirants.',
+          category: 'Education',
+          aiMetadata: {
+            severity: 'Low',
+            tags: ['education', 'library', 'books'],
+            summary: 'Shortage of study materials in rural reading room.',
+            confidenceScore: 0.80,
+          },
+          district: 'Palamu',
+          block: 'Hariharganj',
+          village: 'Kalyanpur',
+          location: 'Gram Panchayat Library Building',
+          citizenName: 'Manoj Kumar',
+          citizenMobile: '9700112233',
+          citizenEmail: 'manoj@example.com',
+          status: 'Approved',
+          imageUrl: '',
+        },
+
+        // ==================== OTHER UNIVERSITY PROBLEMS (5 Items) ====================
+        {
+          problemId: 'JH-2026-OTH-01',
+          title: 'Blocked Drainage System causing Waterlogging in Kanke',
+          description: 'Pre-monsoon blockage in secondary drainage pipes has led to wastewater spilling onto residential pathways.',
+          category: 'Sanitation & Waste',
+          aiMetadata: {
+            severity: 'High',
+            tags: ['drainage', 'waterlogging', 'sanitation'],
+            summary: 'Blocked drainage causing wastewater overflow in residential lanes.',
+            confidenceScore: 0.90,
+          },
           district: 'Ranchi',
           block: 'Kanke',
-          village: 'Sukhurhutu',
-          location: 'Kanke-Ring Road Bypass Junction',
-          citizenName: 'Sunita Devi',
-          citizenMobile: '9835098765',
-          status: 'Solution Proposed',
+          village: 'Pithoria',
+          location: 'Near Central Market Square',
+          citizenName: 'Sanjay Munda',
+          citizenMobile: '9431122334',
+          citizenEmail: 'sanjay.munda@example.com',
+          status: 'Work in Progress',
+          imageUrl: '',
         },
         {
-          problemId: 'JH-2026-000003',
-          title: 'Severe drainage overflow and siltation during monsoon',
-          description: 'Heavy municipal drainage siltation causing blackwater flooding across 80 homes.',
-          category: 'Sanitation & Waste',
-          district: 'Dhanbad',
-          block: 'Jharia',
-          village: 'Bastacola',
-          location: 'Behind Bastacola Colliery Market',
-          citizenName: 'Deepak Kumar Verma',
-          citizenMobile: '9431187654',
-          status: 'Work in Progress',
+          problemId: 'JH-2026-OTH-02',
+          title: 'Damaged Solar Street Lights in Residential Alley',
+          description: 'Solar panels have been damaged and lights are non-functional, creating safety issues at night.',
+          category: 'Electricity & Power',
+          aiMetadata: {
+            severity: 'Medium',
+            tags: ['solar-light', 'public-safety', 'electricity'],
+            summary: 'Non-functional solar street lights posing safety concerns.',
+            confidenceScore: 0.86,
+          },
+          district: 'Ranchi',
+          block: 'Namkum',
+          village: 'Tatisilwai',
+          location: 'Lane 3, Housing Colony',
+          citizenName: 'Anjali Sharma',
+          citizenMobile: '9300445566',
+          citizenEmail: 'anjali@example.com',
+          status: 'Assigned',
+          imageUrl: '',
         },
+        {
+          problemId: 'JH-2026-OTH-03',
+          title: 'Contaminated Handpump Water Source in Phulwari',
+          description: 'Water coming out of the community handpump has a foul smell and brownish tint, rendering it unfit for consumption.',
+          category: 'Drinking Water',
+          aiMetadata: {
+            severity: 'Critical',
+            tags: ['contaminated-water', 'health-hazard', 'handpump'],
+            summary: 'Foul-smelling contaminated water from community handpump.',
+            confidenceScore: 0.96,
+          },
+          district: 'Patna',
+          block: 'Phulwari Sharif',
+          village: 'Islampur',
+          location: 'Near Government Primary School',
+          citizenName: 'Mohammad Tariq',
+          citizenMobile: '9835112233',
+          citizenEmail: 'tariq@example.com',
+          status: 'Resolved',
+          imageUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjRiOGI4Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzMzMyI+UGF0bmEgV2F0ZXIgRXZpZGVuY2U8L3RleHQ+PC9zdmc+',
+        },
+        {
+          problemId: 'JH-2026-OTH-04',
+          title: 'Lack of Public Health Awareness Camp',
+          description: 'Rising seasonal viral fevers in the village require urgent medical intervention and public awareness camps.',
+          category: 'Healthcare',
+          aiMetadata: {
+            severity: 'Medium',
+            tags: ['health', 'awareness-camp', 'medical'],
+            summary: 'Request for health checkup camp due to seasonal fevers.',
+            confidenceScore: 0.82,
+          },
+          district: 'Patna',
+          block: 'Danapur',
+          village: 'Khagaul Rural',
+          location: 'Community Panchayat Hall',
+          citizenName: 'Dr. Rakesh Verma',
+          citizenMobile: '9900223344',
+          citizenEmail: 'rakesh.verma@example.com',
+          status: 'Solution Proposed',
+          imageUrl: '',
+        },
+        {
+          problemId: 'JH-2026-OTH-05',
+          title: 'Clogged Agricultural Canal Branch',
+          description: 'Silt and plastic waste have clogged the local irrigation canal branch, preventing water supply to agricultural fields.',
+          category: 'Agriculture & Irrigation',
+          aiMetadata: {
+            severity: 'High',
+            tags: ['irrigation', 'agriculture', 'canal'],
+            summary: 'Clogged canal branch blocking irrigation water flow to farms.',
+            confidenceScore: 0.89,
+          },
+          district: 'Patna',
+          block: 'Bikram',
+          village: 'Bihta Outskirts',
+          location: 'Canal Marker 14',
+          citizenName: 'Birendra Yadav',
+          citizenMobile: '9470123456',
+          citizenEmail: '',
+          status: 'Assigned',
+          imageUrl: '',
+        }
       ];
 
       for (const p of problems) {
-        // Smart matching: find a university whose expertise array includes this problem's category
-        const matchingUni = await User.findOne({
+        // Smart matching based on district or category expertise
+        let matchingUni = await User.findOne({
           role: 'university',
+          district: p.district,
           expertise: { $in: [p.category] }
         });
+
+        // Fallback to match by expertise alone if district match isn't found
+        if (!matchingUni) {
+          matchingUni = await User.findOne({
+            role: 'university',
+            expertise: { $in: [p.category] }
+          });
+        }
 
         if (matchingUni) {
           p.assignedTo = 'University';
@@ -185,25 +401,25 @@ const seedInitialData = async () => {
         const problemDoc = new Problem(p);
         await problemDoc.save();
       }
-      console.log(`[Seed] Seeded and dynamically mapped problems to universities based on expertise.`);
+      console.log(`[Seed] Seeded 10 dummy problems (5 Palamu + 5 Other Districts) with auto-matching.`);
 
-      // Seed sample Solution by BIT Mesra for problem JH-2026-000002
-      const solarProblem = await Problem.findOne({ problemId: 'JH-2026-000002' });
-      const bitMesra = await User.findOne({ email: 'bitmesra@jharkhand.edu.in' });
+      // Seed sample Solution by Nilamber-Pitamber University for Palamu Problem 1
+      const palamuProblem = await Problem.findOne({ problemId: 'JH-2026-PLM-01' });
+      const npuUniversity = await User.findOne({ email: 'npu@jharkhand.edu.in' });
       
-      if (solarProblem && bitMesra) {
+      if (palamuProblem && npuUniversity) {
         const sol = new Solution({
-          problemId: 'JH-2026-000002',
-          problemRef: solarProblem._id,
-          universityId: bitMesra._id,
-          submittedBy: 'Dr. Sudip Das, Dept of Electrical Engineering',
-          institutionName: 'BIT Mesra, Ranchi',
-          title: 'Autonomous Solar Street Lighting Network with GSM Telemetry',
-          description: 'Design of 45 high-efficiency 40W LED luminaires powered by individual solar panels.',
+          problemId: 'JH-2026-PLM-01',
+          problemRef: palamuProblem._id,
+          universityId: npuUniversity._id,
+          submittedBy: 'Prof. Arvind Kumar, Dept of Civil Engineering',
+          institutionName: 'Nilamber-Pitamber University, Palamu',
+          title: 'Solar-Powered Community Submersible Pump Retrofit',
+          description: 'Deployment of a 3HP solar submersible pump alongside cleaning and deepening of the borewell shaft.',
           status: 'Under Review',
         });
         await sol.save();
-        console.log('[Seed] Sample technical solution seeded for JH-2026-000002 by BIT Mesra.');
+        console.log('[Seed] Sample technical solution seeded for JH-2026-PLM-01 by Nilamber-Pitamber University.');
       }
     }
   } catch (err) {

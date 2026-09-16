@@ -19,12 +19,12 @@ const CATEGORIES = [
   'Other'
 ];
 
-// Active Groq models specifically supported for chat completions
+// Active models (ensure you use a model that supports vision/multimodal input if passing images)
 const TARGET_MODELS = [
+  'llama-3.2-90b-vision-preview', // Or your preferred Groq vision model
   'openai/gpt-oss-120b',
   'groq/compound',
-  'qwen/qwen3.6-27b',
-  'openai/gpt-oss-20b'
+  'qwen/qwen3.6-27b'
 ];
 
 export const analyzeProblemWithAI = async (description, imageBuffer, mimeType) => {
@@ -32,6 +32,25 @@ export const analyzeProblemWithAI = async (description, imageBuffer, mimeType) =
     for (const modelName of TARGET_MODELS) {
       try {
         console.log(`[AI Service] Attempting classification via Groq model: ${modelName}...`);
+
+        // Construct user message payload
+        let userContent = [
+          { 
+            type: 'text', 
+            text: `Analyze this civic problem report: "${description}". Return a JSON object with keys: title (string), category (strictly one of ${JSON.stringify(CATEGORIES)}), severity ("Low", "Medium", "High", "Critical"), tags (array of strings), summary (1 sentence string).` 
+          }
+        ];
+
+        // Attach image to payload if provided
+        if (imageBuffer && mimeType) {
+          const base64Image = imageBuffer.toString('base64');
+          userContent.push({
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType};base64,${base64Image}`
+            }
+          });
+        }
 
         const completion = await groq.chat.completions.create({
           messages: [
@@ -41,7 +60,7 @@ export const analyzeProblemWithAI = async (description, imageBuffer, mimeType) =
             },
             { 
               role: 'user', 
-              content: `Analyze this civic problem report: "${description}". Return JSON object with keys: title (string), category (strictly one of ${JSON.stringify(CATEGORIES)}), severity ("Low", "Medium", "High", "Critical"), tags (array of strings), summary (1 sentence string).` 
+              content: userContent 
             }
           ],
           model: modelName,
@@ -49,7 +68,6 @@ export const analyzeProblemWithAI = async (description, imageBuffer, mimeType) =
         });
 
         const rawText = completion.choices[0].message.content.trim();
-        // Remove markdown backticks if present in output
         const jsonText = rawText.replace(/^```json/, '').replace(/^```/, '').replace(/```$/, '').trim();
         
         const parsedData = JSON.parse(jsonText);

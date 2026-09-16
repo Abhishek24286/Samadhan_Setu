@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'fs';
 import { Problem } from '../models/Problem.js';
 import { User } from '../models/User.js';
 import { analyzeProblemWithAI } from '../services/aiService.js';
@@ -15,7 +16,9 @@ const generateProblemId = async () => {
   return `JH-2026-${nextNumber}`;
 };
 
-// 1. Citizen Report Problem (Authenticated via verifyToken)
+// ==========================================
+// 1. CITIZEN REPORT PROBLEM (With Image Upload)
+// ==========================================
 router.post('/', verifyToken, upload.single('image'), async (req, res) => {
   try {
     const {
@@ -36,33 +39,44 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
       });
     }
 
-    // Process image buffer and text with Gemini AI
-    const imageBuffer = req.file ? req.file.buffer : null;
-    const mimeType = req.file ? req.file.mimetype : null;
+    // Since multer diskStorage saves the file to the 'uploads/' folder, 
+    // read the file buffer from disk so the AI service can analyze it.
+    let imageBuffer = null;
+    let mimeType = null;
+    if (req.file) {
+      imageBuffer = fs.readFileSync(req.file.path);
+      mimeType = req.file.mimetype;
+    }
 
+    // Call AI service with text description and image buffer/mimetype
     const aiResult = await analyzeProblemWithAI(description, imageBuffer, mimeType);
     const problemId = await generateProblemId();
 
+    // Store relative file path string for MongoDB storage & frontend rendering
+    const imagePathUrl = req.file ? `/uploads/${req.file.filename}` : '';
+
     const newProblem = new Problem({
       problemId,
-      title: aiResult.title,
-      category: aiResult.category,
+      title: aiResult.title || description.slice(0, 40) + '...',
+      category: aiResult.category || 'Other',
       description,
       aiMetadata: {
-        severity: aiResult.severity,
-        tags: aiResult.tags,
-        summary: aiResult.summary,
+        severity: aiResult.severity || 'Medium',
+        tags: aiResult.tags || [],
+        summary: aiResult.summary || '',
+        confidenceScore: aiResult.confidenceScore || 0,
       },
-      imageUrl: req.file ? `/uploads/${req.file.filename}` : '',
+      imageUrl: imagePathUrl, // Matches your problemSchema definition
       district,
       block: block || 'Sadar Block',
-      village: village || 'Panchayat Area',
+      village: village || 'Gram Panchayat Area',
       location,
       citizenName,
       citizenMobile,
       citizenEmail: citizenEmail || '',
       reportedBy: req.user._id, // Set from authMiddleware
       status: 'Submitted',
+      assignedTo: 'None',
       timeline: [
         {
           status: 'Submitted',
@@ -80,11 +94,12 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Your problem has been registered, auto-categorized by AI, and routed to an expert university.',
+      message: 'Your problem has been registered, auto-categorized by AI with image analysis, and routed to an expert university.',
       problemId,
       problem: newProblem,
     });
   } catch (error) {
+    console.error('Error recording community problem:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to record community problem.',
@@ -93,7 +108,9 @@ router.post('/', verifyToken, upload.single('image'), async (req, res) => {
   }
 });
 
-// 2. Track Problem by Reference ID
+// ==========================================
+// 2. TRACK PROBLEM BY REFERENCE ID
+// ==========================================
 router.get('/track/:problemId', async (req, res) => {
   try {
     const { problemId } = req.params;
@@ -120,7 +137,9 @@ router.get('/track/:problemId', async (req, res) => {
   }
 });
 
-// 3. Slider / Carousel Feed
+// ==========================================
+// 3. SLIDER / CAROUSEL FEED
+// ==========================================
 router.get('/slider', async (req, res) => {
   try {
     const items = await Problem.find({
@@ -143,7 +162,9 @@ router.get('/slider', async (req, res) => {
   }
 });
 
-// 4. Platform Aggregated Statistics
+// ==========================================
+// 4. PLATFORM AGGREGATED STATISTICS
+// ==========================================
 router.get('/stats', async (req, res) => {
   try {
     const totalReported = await Problem.countDocuments();
@@ -173,14 +194,16 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-// 5. Public List of Problems
+// ==========================================
+// 5. PUBLIC LIST OF PROBLEMS (With Filters)
+// ==========================================
 router.get('/', async (req, res) => {
   try {
     const { category, district, status, search } = req.query;
     const filter = {};
 
     if (category && category !== 'All') filter.category = category;
-    if (district && district !== 'All') filter.district = district;
+    if(district && district !== 'All') filter.district = district;
     if (status && status !== 'All') filter.status = status;
 
     if (search) {

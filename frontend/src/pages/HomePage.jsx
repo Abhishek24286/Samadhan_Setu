@@ -80,10 +80,16 @@ const HomePage = () => {
       try {
         const res = await apiRequest('/problems/stats');
         if (res.success && res.stats) {
+          // Use ?? (nullish coalescing), not ||, so a genuine 0 count from the
+          // database is preserved instead of being overwritten by the demo
+          // fallback numbers. With ||, 0 is falsy and would incorrectly fall
+          // through to the hardcoded value, which previously caused
+          // "problems resolved" to show a bigger number than "problems
+          // reported" whenever the real resolved count was legitimately 0.
           setStats({
-            problemsReported: res.stats.problemsReported || 12450,
-            problemsResolved: res.stats.problemsResolved || 11080,
-            districtsCovered: res.stats.districtsCovered || 24,
+            problemsReported: res.stats.problemsReported ?? 0,
+            problemsResolved: res.stats.problemsResolved ?? 0,
+            districtsCovered: res.stats.districtsCovered ?? 24,
           });
         }
       } catch (err) {
